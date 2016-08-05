@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/jruby/jruby-openssl"
   s.licenses = ["EPL-1.0", "GPL-2.0", "LGPL-2.1"]
   s.requirements = ["jar org.bouncycastle:bcpkix-jdk15on, 1.54", "jar org.bouncycastle:bcprov-jdk15on, 1.54"]
-  s.rubygems_version = "2.4.6"
+  s.rubygems_version = "2.4.8"
   s.summary = "JRuby OpenSSL"
 
   if s.respond_to? :specification_version then

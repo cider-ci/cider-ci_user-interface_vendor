@@ -41,36 +41,30 @@ module Jars
       require 'bundler'
       #TODO make this group a commandline option
       Bundler.setup( 'default' )
+      maven.property( "jars.bundler", true )
       done = []
       index = 0
+      cwd = File.expand_path( "." )
       Gem.loaded_specs.each do |name, spec|
-        deps = GemspecArtifacts.new( spec )
-        deps.artifacts.each do |a|
-          if !done.include?( a.key ) and a.scope != 'provided' and a.scope != 'test'
-            maven.property( "jars.#{index}", a.to_coord )
-            if a.exclusions
-              jndex = 0
-              a.exclusions.each do |ex|
-                maven.property( "jars.#{index}.exclusions.#{jndex}", ex.to_s )
-              end
-            end
-            maven.property( "jars.#{index}.scope", a.scope ) if a.scope
-            index += 1
-            done << a.key
-          end
+        # if gemspec is local then include all dependencies
+        maven.attach_jars( spec, cwd == spec.full_gem_path )
+      end
+    rescue Exception => e
+      case e.class.to_s
+      when 'LoadError'
+        if Jars.verbose?
+          warn e.message
+          warn "no bundler found - ignore Gemfile if exists"
         end
+      when 'Bundler::GemfileNotFound'
+        # do nothing then as we have bundler but no Gemfile
+      when 'Bundler::GemNotFound'
+        warn "can not setup bundler with #{Bundler.default_lockfile}"
+        raise e
+      else
+        # reraise exception so user sees it
+        raise e
       end
-    rescue Gem::LoadError => e
-      # not sure why to reraise the exception
-      raise e
-    rescue LoadError => e
-      if Jars.verbose?
-        warn e.message
-        warn "no bundler found - ignore Gemfile if exists"
-      end
-    rescue Bundler::GemNotFound => e
-      warn "can not setup bundler with #{Bundler.default_lockfile}"
-      raise e
     ensure
       $LOAD_PATH.replace( load_path )
     end
@@ -80,7 +74,7 @@ module Jars
       out = File.expand_path( '.jars.output' )
       tree = File.expand_path( '.jars.tree' )
       maven.property( 'jars.outputFile', out )
-      maven.property( 'maven.repo.local', Jars.home )
+      maven.property( 'maven.repo.local', Jars.local_maven_repo )
       maven.property( 'jars.home', vendor_dir ) if vendor_dir
       maven.property( 'jars.lock', File.expand_path( Jars.lock ) )
       maven.property( 'jars.force', options[ :force ] == true )

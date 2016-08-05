@@ -6,6 +6,21 @@ module Jars
 
   class Classpath
 
+    # convenient method
+    def self.require( scope = nil )
+      new.require( scope )
+    end
+
+    # convenient method
+    def self.classpath( scope = nil )
+      new.classpath( scope )
+    end
+
+    # convenient method
+    def self.classpath_string( scope = nil )
+      new.classpath_string( scope )
+    end
+
     def initialize( spec = nil, deps = nil )
       @spec = spec
       @deps = deps
@@ -21,7 +36,11 @@ module Jars
     end
 
     def dependencies_list
-      if @deps ||= Jars.lock_path( mvn.basedir )
+      if @deps.nil?
+        deps = Jars.lock_path( mvn.basedir )
+        @deps = deps if deps && File.exist?( deps )
+      end
+      if @deps
         @deps
       else
         resolve_dependencies
@@ -32,7 +51,7 @@ module Jars
     DEPENDENCY_LIST = 'dependencies.list'
     def resolve_dependencies
       basedir = workdir( 'pkg' ) || workdir( 'target' ) || workdir( '' )
-      deps = File.join( basedir, DEPENDENCY_LIST )      
+      deps = File.join( basedir, DEPENDENCY_LIST )
       mvn.resolve_dependencies_list( deps )
       deps
     end
@@ -65,7 +84,8 @@ module Jars
       deps = dependencies_list
       Lock.new( deps ).process( scope, &block )
     ensure
-      FileUtils.rm_f( DEPENDENCY_LIST ) if deps
+      # just delete the temporary file if it exists
+      FileUtils.rm_f( DEPENDENCY_LIST )
     end
     private :process
 

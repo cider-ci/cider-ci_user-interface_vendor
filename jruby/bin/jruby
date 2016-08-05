@@ -91,10 +91,6 @@ if [ -z "$JAVACMD" ] ; then
   fi
 fi
 
-if [ -z "$JAVA_MEM" ] ; then
-  JAVA_MEM=-Xmx500m
-fi
-
 if [ -z "$JAVA_STACK" ] ; then
   JAVA_STACK=-Xss2048k
 fi
@@ -234,16 +230,7 @@ do
               -*)
                 opt="${opt:1}=false" ;;
             esac
-            java_args=("${java_args[@]}" "-Djvmci.option.$opt")
-        elif [ "${val:0:15}" = "-Djvmci.option." ]; then # Graal options
-            opt=${val:15}
-            java_args=("${java_args[@]}" "-Djvmci.option.$opt")
-        elif [ "${val:0:15}" = "-Dgraal.option." ]; then # Graal options
-            opt=${val:15}
-            java_args=("${java_args[@]}" "-Djvmci.option.$opt")
-        elif [ "${val:0:8}" = "-Dgraal." ]; then # Graal options
-            opt=${val:8}
-            java_args=("${java_args[@]}" "-Djvmci.option.$opt")
+            java_args=("${java_args[@]}" "-Dgraal.$opt")
         else
             if [ "${val:0:3}" = "-ea" ]; then
                 VERIFY_JRUBY="yes"
@@ -256,11 +243,11 @@ do
      # Pass -X... and -X? search options through
      -X*\.\.\.|-X*\?)
         ruby_args=("${ruby_args[@]}" "$1") ;;
-     # Match -Xa.b.c=d to translate to -Da.b.c=d as a java option
      -X+T)
         JRUBY_CP="$JRUBY_CP$CP_DELIMITER$JRUBY_HOME/lib/jruby-truffle.jar"
         ruby_args=("${ruby_args[@]}" "-X+T")
         ;;
+     # Match -Xa.b.c=d to translate to -Da.b.c=d as a java option
      -X*)
         val=${1:2}
         if expr "$val" : '.*[.]' > /dev/null; then
@@ -383,7 +370,7 @@ if [ "$VERIFY_JRUBY" != "" ]; then
     "-Djruby.home=$JRUBY_HOME" \
     "-Djruby.lib=$JRUBY_HOME/lib" -Djruby.script=jruby \
     "-Djruby.shell=$JRUBY_SHELL" \
-    $java_class $JRUBY_OPTS "$@"
+    $java_class $mode "$@"
 
   # Record the exit status immediately, or it will be overridden.
   JRUBY_STATUS=$?
