@@ -2,7 +2,7 @@ require 'rake/invocation_exception_mixin'
 
 module Rake
 
-  ##
+  # #########################################################################
   # A Task is the basic unit of work in a Rakefile.  Tasks have associated
   # actions (possibly more than one) and a list of prerequisites.  When
   # invoked, a task will first ensure that all of its prerequisites have an
@@ -34,18 +34,14 @@ module Rake
       name
     end
 
-    def inspect # :nodoc:
+    def inspect
       "<#{self.class} #{name} => [#{prerequisites.join(', ')}]>"
     end
 
     # List of sources for task.
     attr_writer :sources
     def sources
-      if defined?(@sources)
-        @sources
-      else
-        prerequisites
-      end
+      @sources ||= []
     end
 
     # List of prerequisite tasks
@@ -53,7 +49,7 @@ module Rake
       prerequisites.map { |pre| lookup_prerequisite(pre) }
     end
 
-    def lookup_prerequisite(prerequisite_name) # :nodoc:
+    def lookup_prerequisite(prerequisite_name)
       application[prerequisite_name, @scope]
     end
     private :lookup_prerequisite
@@ -67,7 +63,7 @@ module Rake
       seen.values
     end
 
-    def collect_prerequisites(seen) # :nodoc:
+    def collect_prerequisites(seen)
       prerequisite_tasks.each do |pre|
         next if seen[pre.name]
         seen[pre.name] = pre
@@ -78,7 +74,7 @@ module Rake
 
     # First source from a rule (nil if no sources)
     def source
-      sources.first
+      @sources.first if defined?(@sources)
     end
 
     # Create a task named +task_name+ with no actions or prerequisites. Use
@@ -184,7 +180,7 @@ module Rake
     end
     protected :invoke_with_call_chain
 
-    def add_chain_to(exception, new_chain) # :nodoc:
+    def add_chain_to(exception, new_chain)
       exception.extend(InvocationExceptionMixin) unless
         exception.respond_to?(:chain)
       exception.chain = new_chain if exception.chain.nil?
@@ -261,12 +257,11 @@ module Rake
       add_comment(comment) if comment && ! comment.empty?
     end
 
-    def comment=(comment) # :nodoc:
+    def comment=(comment)
       add_comment(comment)
     end
 
-    def add_comment(comment) # :nodoc:
-      return if comment.nil?
+    def add_comment(comment)
       @comments << comment unless @comments.include?(comment)
     end
     private :add_comment

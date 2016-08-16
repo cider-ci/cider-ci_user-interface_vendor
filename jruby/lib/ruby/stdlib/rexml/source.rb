@@ -1,5 +1,4 @@
 # coding: US-ASCII
-# frozen_string_literal: false
 require 'rexml/encoding'
 
 module REXML
@@ -186,7 +185,7 @@ module REXML
       # You'll notice that this next section is very similar to the same
       # section in match(), but just a liiittle different.  This is
       # because it is a touch faster to do it this way with scan()
-      # than the way match() does it; enough faster to warrant duplicating
+      # than the way match() does it; enough faster to warrent duplicating
       # some code
       if rv.size == 0
         until @buffer =~ pattern or @source.nil?

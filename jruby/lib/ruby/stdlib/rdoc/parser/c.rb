@@ -611,7 +611,7 @@ class RDoc::Parser::C < RDoc::Parser
   def find_body class_name, meth_name, meth_obj, file_content, quiet = false
     case file_content
     when %r%((?>/\*.*?\*/\s*)?)
-            ((?:(?:\w+)\s+)?
+            ((?:(?:static|SWIGINTERN)\s+)?
              (?:intern\s+)?VALUE\s+#{meth_name}
              \s*(\([^)]*\))([^;]|$))%xm then
       comment = RDoc::Comment.new $1, @top_level
@@ -745,11 +745,11 @@ class RDoc::Parser::C < RDoc::Parser
     elsif @content =~ %r%Document-(?:class|module):\s+#{class_name}\s*?
                          (?:<\s+[:,\w]+)?\n((?>.*?\*/))%xm then
       comment = "/*\n#{$1}"
-    elsif @content =~ %r%((?>/\*.*?\*/\s+))
-                         ([\w\.\s]+\s* = \s+)?rb_define_(class|module)[\t (]*?"(#{class_name})"%xm then
+    elsif @content =~ %r%.*((?>/\*.*?\*/\s+))
+                         ([\w\.\s]+\s* = \s+)?rb_define_(class|module).*?"(#{class_name})"%xm then
       comment = $1
-    elsif @content =~ %r%((?>/\*.*?\*/\s+))
-                         ([\w\. \t]+ = \s+)?rb_define_(class|module)_under[\t\w, (]*?"(#{class_name.split('::').last})"%xm then
+    elsif @content =~ %r%.*((?>/\*.*?\*/\s+))
+                         ([\w\.\s]+\s* = \s+)?rb_define_(class|module)_under.*?"(#{class_name.split('::').last})"%xm then
       comment = $1
     else
       comment = ''
@@ -1186,6 +1186,7 @@ class RDoc::Parser::C < RDoc::Parser
 
     if hash then
       args << "p#{position} = {}"
+      position += 1
     end
 
     args << '&block' if block

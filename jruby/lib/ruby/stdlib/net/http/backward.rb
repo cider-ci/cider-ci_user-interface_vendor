@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # for backward compatibility
 
 # :enddoc:

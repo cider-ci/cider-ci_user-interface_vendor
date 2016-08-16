@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # httpproxy.rb -- HTTPProxy Class
 #
@@ -157,12 +156,12 @@ module WEBrick
           os << proxy_request_line << CRLF
           @logger.debug("CONNECT: > #{proxy_request_line}")
           if credentials
-            @logger.debug("CONNECT: sending credentials")
+            @logger.debug("CONNECT: sending a credentials")
             os << "Proxy-Authorization: " << credentials << CRLF
           end
           os << CRLF
           proxy_status_line = os.gets(LF)
-          @logger.debug("CONNECT: read Status-Line from the upstream server")
+          @logger.debug("CONNECT: read a Status-Line form the upstream server")
           @logger.debug("CONNECT: < #{proxy_status_line}")
           if %r{^HTTP/\d+\.\d+\s+200\s*} =~ proxy_status_line
             while line = os.gets(LF)

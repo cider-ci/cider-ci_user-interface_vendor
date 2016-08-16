@@ -44,10 +44,9 @@ module Test
         methods = @test_case.public_instance_methods(true)
         super_test_case = @test_case.superclass
         methods -= super_test_case.public_instance_methods(true)
-        methods |= @test_case.public_instance_methods(false)
         method_names = methods.collect(&:to_s)
         test_names = method_names.find_all do |method_name|
-          /\Atest./ =~ method_name or
+          method_name =~ /^test./ or
             @test_case.find_attribute(method_name, :test)
         end
         __send__("sort_test_names_in_#{@test_case.test_order}_order", test_names)

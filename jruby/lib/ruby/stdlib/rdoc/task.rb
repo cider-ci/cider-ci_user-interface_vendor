@@ -291,7 +291,7 @@ class RDoc::Task < Rake::TaskLib
   private
 
   def rdoc_target
-    "#{rdoc_dir}/created.rid"
+    "#{rdoc_dir}/index.html"
   end
 
   def rdoc_task_name

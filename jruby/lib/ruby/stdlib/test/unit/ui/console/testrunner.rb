@@ -6,11 +6,6 @@
 #   * Copyright (c) 2008-2013 Kouhei Sutou <kou@clear-code.com>
 # License:: Ruby license.
 
-begin
-  require 'io/console'
-rescue LoadError
-end
-
 require 'test/unit/color-scheme'
 require 'test/unit/code-snippet-fetcher'
 require 'test/unit/fault-location-detector'
@@ -94,8 +89,7 @@ module Test
 
           def add_fault(fault)
             @faults << fault
-            output_progress(fault.single_character_display,
-                            fault_marker_color(fault))
+            output_progress(fault.single_character_display, fault_color(fault))
             output_progress_in_detail(fault) if @show_detail_immediately
             @already_outputted = true if fault.critical?
           end
@@ -179,17 +173,17 @@ module Test
           def output_fault_in_detail(fault)
             if fault.is_a?(Failure) and
                 fault.inspected_expected and fault.inspected_actual
-              output_single("#{fault.label}: ")
-              output(fault.test_name, fault_color(fault))
+              output_single(fault.label, fault_color(fault))
+              output(":")
+              output(fault.test_name)
               output_fault_backtrace(fault)
               output_failure_message(fault)
             else
+              output_single(fault.label, fault_color(fault))
               if fault.is_a?(Error)
-                output_single("#{fault.label}: ")
-                output_single(fault.test_name, fault_color(fault))
+                output(": #{fault.test_name}")
                 output_fault_message(fault)
               else
-                output_single(fault.label, fault_color(fault))
                 output_fault_message(fault)
                 output(fault.test_name)
               end
@@ -314,11 +308,11 @@ module Test
 
           def output_statistics(elapsed_time)
             output("Finished in #{elapsed_time} seconds.")
-            output_summary_marker
-            output(@result)
-            output("%g%% passed" % @result.pass_percentage)
+            nl
+            output(@result, result_color)
+            output("%g%% passed" % @result.pass_percentage, result_color)
             unless elapsed_time.zero?
-              output_summary_marker
+              nl
               test_throughput = @result.run_count / elapsed_time
               assertion_throughput = @result.assertion_count / elapsed_time
               throughput = [
@@ -327,16 +321,6 @@ module Test
               ]
               output(throughput.join(", "))
             end
-          end
-
-          def output_summary_marker
-            term_width = guess_term_width
-            if term_width.zero?
-              marker_width = 6
-            else
-              marker_width = term_width
-            end
-            output("-" * marker_width, summary_marker_color)
           end
 
           def test_started(test)
@@ -353,7 +337,7 @@ module Test
 
           def test_finished(test)
             unless @already_outputted
-              output_progress(".", color("pass-marker"))
+              output_progress(".", color("pass"))
             end
             @already_outputted = false
 
@@ -439,7 +423,7 @@ module Test
 
           def output_progress_in_detail_marker(fault)
             if @progress_row_max > 0
-              output("=" * @progress_row_max)
+              output("=" * @progress_row_max, fault_color(fault))
             else
               nl
             end
@@ -469,25 +453,20 @@ module Test
             _color
           end
 
-          def fault_class_color_name(fault_class)
-            fault_class.name.split(/::/).last.downcase
-          end
-
           def fault_color(fault)
-            color(fault_class_color_name(fault.class))
+            fault_class_color(fault.class)
           end
 
-          def fault_marker_color(fault)
-            color("#{fault_class_color_name(fault.class)}-marker")
+          def fault_class_color(fault_class)
+            color(fault_class.name.split(/::/).last.downcase)
           end
 
-          def summary_marker_color
-            color("#{@result.status}-marker")
+          def result_color
+            color(@result.status)
           end
 
           def guess_color_availability
             return false unless @output.tty?
-            return true if windows? and ruby_2_0_or_later?
             case ENV["TERM"]
             when /(?:term|screen)(?:-(?:256)?color)?\z/
               true
@@ -495,14 +474,6 @@ module Test
               return true if ENV["EMACS"] == "t"
               false
             end
-          end
-
-          def windows?
-            /mswin|mingw/ === RUBY_PLATFORM
-          end
-
-          def ruby_2_0_or_later?
-            RUBY_VERSION >= "2.0.0"
           end
 
           def guess_progress_row_max
@@ -519,30 +490,9 @@ module Test
           end
 
           def guess_term_width
-            guess_term_width_from_io || guess_term_width_from_env || 0
-          end
-
-          def guess_term_width_from_io
-            if @output.respond_to?(:winsize)
-              begin
-                @output.winsize[1]
-              rescue SystemCallError
-                nil
-              end
-            else
-              nil
-            end
-          end
-
-          def guess_term_width_from_env
-            env = ENV["COLUMNS"] || ENV["TERM_WIDTH"]
-            return nil if env.nil?
-
-            begin
-              Integer(env)
-            rescue ArgumentError
-              nil
-            end
+            Integer(ENV["COLUMNS"] || ENV["TERM_WIDTH"] || 0)
+          rescue ArgumentError
+            0
           end
         end
 
@@ -553,7 +503,6 @@ module Test
           end
 
           def need_diff?(options={})
-            return false if one_line_all_change?
             operations.each do |tag,|
               return true if [:replace, :equal].include?(tag)
             end
@@ -561,18 +510,6 @@ module Test
           end
 
           private
-          def one_line_all_change?
-            return false if operations.size != 1
-
-            tag, from_start, from_end, to_start, to_end = operations.first
-            return false if tag != :replace
-            return false if [from_start, from_end] != [0, 1]
-            return false if [from_start, from_end] != [to_start, to_end]
-
-            _, _, _line_operations = line_operations(@from.first, @to.first)
-            _line_operations.size == 1
-          end
-
           def output_single(something, color=nil)
             @runner.__send__(:output_single, something, color)
           end

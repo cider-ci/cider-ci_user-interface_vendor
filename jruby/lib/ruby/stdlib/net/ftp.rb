@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 #
 # = net/ftp.rb - FTP Client Library
 #
@@ -18,7 +17,6 @@
 require "socket"
 require "monitor"
 require "net/protocol"
-require "time"
 
 module Net
 
@@ -80,13 +78,12 @@ module Net
     FTP_PORT = 21
     CRLF = "\r\n"
     DEFAULT_BLOCKSIZE = BufferedIO::BUFSIZE
-    @@default_passive = true
     # :startdoc:
 
     # When +true+, transfers are performed in binary mode.  Default: +true+.
     attr_reader :binary
 
-    # When +true+, the connection is in passive mode.  Default: +true+.
+    # When +true+, the connection is in passive mode.  Default: +false+.
     attr_accessor :passive
 
     # When +true+, all traffic to and from the server is written
@@ -125,18 +122,6 @@ module Net
     # The server's last response.
     attr_reader :last_response
 
-    # When +true+, connections are in passive mode per default.
-    # Default: +true+.
-    def self.default_passive=(value)
-      @@default_passive = value
-    end
-
-    # When +true+, connections are in passive mode per default.
-    # Default: +true+.
-    def self.default_passive
-      @@default_passive
-    end
-
     #
     # A synonym for <tt>FTP.new</tt>, but with a mandatory host parameter.
     #
@@ -164,7 +149,7 @@ module Net
     def initialize(host = nil, user = nil, passwd = nil, acct = nil)
       super()
       @binary = true
-      @passive = @@default_passive
+      @passive = false
       @debug_mode = false
       @resume = false
       @sock = NullSocket.new
@@ -313,16 +298,16 @@ module Net
 
     # Receive a section of lines until the response code's match.
     def getmultiline # :nodoc:
-      lines = []
-      lines << getline
-      code = lines.last.slice(/\A([0-9a-zA-Z]{3})-/, 1)
-      if code
-        delimiter = code + " "
+      line = getline
+      buff = line
+      if line[3] == ?-
+          code = line[0, 3]
         begin
-          lines << getline
-        end until lines.last.start_with?(delimiter)
+          line = getline
+          buff << "\n" << line
+        end until line[0, 3] == code and line[3] != ?-
       end
-      return lines.join("\n") + "\n"
+      return buff << "\n"
     end
     private :getmultiline
 
@@ -352,7 +337,7 @@ module Net
     # equal 2.
     def voidresp # :nodoc:
       resp = getresp
-      if !resp.start_with?("2")
+      if resp[0] != ?2
         raise FTPReplyError, resp
       end
     end
@@ -417,14 +402,14 @@ module Net
         conn = open_socket(host, port)
         if @resume and rest_offset
           resp = sendcmd("REST " + rest_offset.to_s)
-          if !resp.start_with?("3")
+          if resp[0] != ?3
             raise FTPReplyError, resp
           end
         end
         resp = sendcmd(cmd)
         # skip 2XX for some ftp servers
-        resp = getresp if resp.start_with?("2")
-        if !resp.start_with?("1")
+        resp = getresp if resp[0] == ?2
+        if resp[0] != ?1
           raise FTPReplyError, resp
         end
       else
@@ -433,14 +418,14 @@ module Net
           sendport(sock.addr[3], sock.addr[1])
           if @resume and rest_offset
             resp = sendcmd("REST " + rest_offset.to_s)
-            if !resp.start_with?("3")
+            if resp[0] != ?3
               raise FTPReplyError, resp
             end
           end
           resp = sendcmd(cmd)
           # skip 2XX for some ftp servers
-          resp = getresp if resp.start_with?("2")
-          if !resp.start_with?("1")
+          resp = getresp if resp[0] == ?2
+          if resp[0] != ?1
             raise FTPReplyError, resp
           end
           conn = BufferedSocket.new(sock.accept)
@@ -471,16 +456,16 @@ module Net
       resp = ""
       synchronize do
         resp = sendcmd('USER ' + user)
-        if resp.start_with?("3")
+        if resp[0] == ?3
           raise FTPReplyError, resp if passwd.nil?
           resp = sendcmd('PASS ' + passwd)
         end
-        if resp.start_with?("3")
+        if resp[0] == ?3
           raise FTPReplyError, resp if acct.nil?
           resp = sendcmd('ACCT ' + acct)
         end
       end
-      if !resp.start_with?("2")
+      if resp[0] != ?2
         raise FTPReplyError, resp
       end
       @welcome = resp
@@ -613,8 +598,7 @@ module Net
     # chunks.
     #
     def getbinaryfile(remotefile, localfile = File.basename(remotefile),
-                      blocksize = DEFAULT_BLOCKSIZE, &block) # :yield: data
-      f = nil
+                      blocksize = DEFAULT_BLOCKSIZE) # :yield: data
       result = nil
       if localfile
         if @resume
@@ -625,18 +609,18 @@ module Net
           f = open(localfile, "w")
         end
       elsif !block_given?
-        result = String.new
+        result = ""
       end
       begin
-        f&.binmode
-        retrbinary("RETR #{remotefile}", blocksize, rest_offset) do |data|
-          f&.write(data)
-          block&.(data)
-          result&.concat(data)
+        f.binmode if localfile
+        retrbinary("RETR " + remotefile.to_s, blocksize, rest_offset) do |data|
+          f.write(data) if localfile
+          yield(data) if block_given?
+          result.concat(data) if result
         end
         return result
       ensure
-        f&.close
+        f.close if localfile
       end
     end
 
@@ -647,25 +631,23 @@ module Net
     # If a block is supplied, it is passed the retrieved data one
     # line at a time.
     #
-    def gettextfile(remotefile, localfile = File.basename(remotefile),
-                    &block) # :yield: line
-      f = nil
+    def gettextfile(remotefile, localfile = File.basename(remotefile)) # :yield: line
       result = nil
       if localfile
         f = open(localfile, "w")
       elsif !block_given?
-        result = String.new
+        result = ""
       end
       begin
-        retrlines("RETR #{remotefile}") do |line, newline|
+        retrlines("RETR " + remotefile) do |line, newline|
           l = newline ? line + "\n" : line
-          f&.print(l)
-          block&.(line, newline)
-          result&.concat(l)
+          f.print(l) if localfile
+          yield(line, newline) if block_given?
+          result.concat(l) if result
         end
         return result
       ensure
-        f&.close
+        f.close if localfile
       end
     end
 
@@ -702,9 +684,9 @@ module Net
       begin
         f.binmode
         if rest_offset
-          storbinary("APPE #{remotefile}", f, blocksize, rest_offset, &block)
+          storbinary("APPE " + remotefile, f, blocksize, rest_offset, &block)
         else
-          storbinary("STOR #{remotefile}", f, blocksize, rest_offset, &block)
+          storbinary("STOR " + remotefile, f, blocksize, rest_offset, &block)
         end
       ensure
         f.close
@@ -719,7 +701,7 @@ module Net
     def puttextfile(localfile, remotefile = File.basename(localfile), &block) # :yield: line
       f = open(localfile)
       begin
-        storlines("STOR #{remotefile}", f, &block)
+        storlines("STOR " + remotefile, f, &block)
       ensure
         f.close
       end
@@ -755,7 +737,7 @@ module Net
     def nlst(dir = nil)
       cmd = "NLST"
       if dir
-        cmd = "#{cmd} #{dir}"
+        cmd = cmd + " " + dir
       end
       files = []
       retrlines(cmd) do |line|
@@ -771,238 +753,40 @@ module Net
     def list(*args, &block) # :yield: line
       cmd = "LIST"
       args.each do |arg|
-        cmd = "#{cmd} #{arg}"
-      end
-      lines = []
-      retrlines(cmd) do |line|
-        lines << line
+        cmd = cmd + " " + arg.to_s
       end
       if block
-        lines.each(&block)
+        retrlines(cmd, &block)
+      else
+        lines = []
+        retrlines(cmd) do |line|
+          lines << line
+        end
+        return lines
       end
-      return lines
     end
     alias ls list
     alias dir list
 
     #
-    # MLSxEntry represents an entry in responses of MLST/MLSD.
-    # Each entry has the facts (e.g., size, last modification time, etc.)
-    # and the pathname.
-    #
-    class MLSxEntry
-      attr_reader :facts, :pathname
-
-      def initialize(facts, pathname)
-        @facts = facts
-        @pathname = pathname
-      end
-
-      standard_facts = %w(size modify create type unique perm
-                          lang media-type charset)
-      standard_facts.each do |factname|
-        define_method factname.gsub(/-/, "_") do
-          facts[factname]
-        end
-      end
-
-      #
-      # Returns +true+ if the entry is a file (i.e., the value of the type
-      # fact is file).
-      #
-      def file?
-        return facts["type"] == "file"
-      end
-
-      #
-      # Returns +true+ if the entry is a directory (i.e., the value of the
-      # type fact is dir, cdir, or pdir).
-      #
-      def directory?
-        if /\A[cp]?dir\z/.match(facts["type"])
-          return true
-        else
-          return false
-        end
-      end
-
-      #
-      # Returns +true+ if the APPE command may be applied to the file.
-      #
-      def appendable?
-        return facts["perm"].include?(?a)
-      end
-
-      #
-      # Returns +true+ if files may be created in the directory by STOU,
-      # STOR, APPE, and RNTO.
-      #
-      def creatable?
-        return facts["perm"].include?(?c)
-      end
-
-      #
-      # Returns +true+ if the file or directory may be deleted by DELE/RMD.
-      #
-      def deletable?
-        return facts["perm"].include?(?d)
-      end
-
-      #
-      # Returns +true+ if the directory may be entered by CWD/CDUP.
-      #
-      def enterable?
-        return facts["perm"].include?(?e)
-      end
-
-      #
-      # Returns +true+ if the file or directory may be renamed by RNFR.
-      #
-      def renamable?
-        return facts["perm"].include?(?f)
-      end
-
-      #
-      # Returns +true+ if the listing commands, LIST, NLST, and MLSD are
-      # applied to the directory.
-      #
-      def listable?
-        return facts["perm"].include?(?l)
-      end
-
-      #
-      # Returns +true+ if the MKD command may be used to create a new
-      # directory within the directory.
-      #
-      def directory_makable?
-        return facts["perm"].include?(?m)
-      end
-
-      #
-      # Returns +true+ if the objects in the directory may be deleted, or
-      # the directory may be purged.
-      #
-      def purgeable?
-        return facts["perm"].include?(?p)
-      end
-
-      #
-      # Returns +true+ if the RETR command may be applied to the file.
-      #
-      def readable?
-        return facts["perm"].include?(?r)
-      end
-
-      #
-      # Returns +true+ if the STOR command may be applied to the file.
-      #
-      def writable?
-        return facts["perm"].include?(?w)
-      end
-    end
-
-    CASE_DEPENDENT_PARSER = ->(value) { value }
-    CASE_INDEPENDENT_PARSER = ->(value) { value.downcase }
-    DECIMAL_PARSER = ->(value) { value.to_i }
-    OCTAL_PARSER = ->(value) { value.to_i(8) }
-    TIME_PARSER = ->(value, local = false) {
-      unless /\A(?<year>\d{4})(?<month>\d{2})(?<day>\d{2})
-            (?<hour>\d{2})(?<min>\d{2})(?<sec>\d{2})
-            (\.(?<fractions>\d+))?/x =~ value
-        raise FTPProtoError, "invalid time-val: #{value}"
-      end
-      usec = fractions.to_i * 10 ** (6 - fractions.to_s.size)
-      Time.send(local ? :local : :utc, year, month, day, hour, min, sec, usec)
-    }
-    FACT_PARSERS = Hash.new(CASE_DEPENDENT_PARSER)
-    FACT_PARSERS["size"] = DECIMAL_PARSER
-    FACT_PARSERS["modify"] = TIME_PARSER
-    FACT_PARSERS["create"] = TIME_PARSER
-    FACT_PARSERS["type"] = CASE_INDEPENDENT_PARSER
-    FACT_PARSERS["unique"] = CASE_DEPENDENT_PARSER
-    FACT_PARSERS["perm"] = CASE_INDEPENDENT_PARSER
-    FACT_PARSERS["lang"] = CASE_INDEPENDENT_PARSER
-    FACT_PARSERS["media-type"] = CASE_INDEPENDENT_PARSER
-    FACT_PARSERS["charset"] = CASE_INDEPENDENT_PARSER
-    FACT_PARSERS["unix.mode"] = OCTAL_PARSER
-    FACT_PARSERS["unix.owner"] = DECIMAL_PARSER
-    FACT_PARSERS["unix.group"] = DECIMAL_PARSER
-    FACT_PARSERS["unix.ctime"] = TIME_PARSER
-    FACT_PARSERS["unix.atime"] = TIME_PARSER
-
-    def parse_mlsx_entry(entry)
-      facts, pathname = entry.chomp.split(/ /, 2)
-      unless pathname
-        raise FTPProtoError, entry
-      end
-      return MLSxEntry.new(
-        facts.scan(/(.*?)=(.*?);/).each_with_object({}) {
-          |(factname, value), h|
-          name = factname.downcase
-          h[name] = FACT_PARSERS[name].(value)
-        },
-        pathname)
-    end
-    private :parse_mlsx_entry
-
-    #
-    # Returns data (e.g., size, last modification time, entry type, etc.)
-    # about the file or directory specified by +pathname+.
-    # If +pathname+ is omitted, the current directory is assumed.
-    #
-    def mlst(pathname = nil)
-      cmd = pathname ? "MLST #{pathname}" : "MLST"
-      resp = sendcmd(cmd)
-      if !resp.start_with?("250")
-        raise FTPReplyError, resp
-      end
-      line = resp.lines[1]
-      unless line
-        raise FTPProtoError, resp
-      end
-      entry = line.sub(/\A(250-| *)/, "")
-      return parse_mlsx_entry(entry)
-    end
-
-    #
-    # Returns an array of the entries of the directory specified by
-    # +pathname+.
-    # Each entry has the facts (e.g., size, last modification time, etc.)
-    # and the pathname.
-    # If a block is given, it iterates through the listing.
-    # If +pathname+ is omitted, the current directory is assumed.
-    #
-    def mlsd(pathname = nil, &block) # :yield: entry
-      cmd = pathname ? "MLSD #{pathname}" : "MLSD"
-      entries = []
-      retrlines(cmd) do |line|
-        entries << parse_mlsx_entry(line)
-      end
-      if block
-        entries.each(&block)
-      end
-      return entries
-    end
-
-    #
     # Renames a file on the server.
     #
     def rename(fromname, toname)
-      resp = sendcmd("RNFR #{fromname}")
-      if !resp.start_with?("3")
+      resp = sendcmd("RNFR " + fromname)
+      if resp[0] != ?3
         raise FTPReplyError, resp
       end
-      voidcmd("RNTO #{toname}")
+      voidcmd("RNTO " + toname)
     end
 
     #
     # Deletes a file on the server.
     #
     def delete(filename)
-      resp = sendcmd("DELE #{filename}")
-      if resp.start_with?("250")
+      resp = sendcmd("DELE " + filename)
+      if resp[0, 3] == "250"
         return
-      elsif resp.start_with?("5")
+      elsif resp[0] == ?5
         raise FTPPermError, resp
       else
         raise FTPReplyError, resp
@@ -1023,41 +807,40 @@ module Net
           end
         end
       end
-      cmd = "CWD #{dirname}"
+      cmd = "CWD " + dirname
       voidcmd(cmd)
     end
-
-    def get_body(resp) # :nodoc:
-      resp.slice(/\A[0-9a-zA-Z]{3} (.*)$/, 1)
-    end
-    private :get_body
 
     #
     # Returns the size of the given (remote) filename.
     #
     def size(filename)
       with_binary(true) do
-        resp = sendcmd("SIZE #{filename}")
-        if !resp.start_with?("213")
+        resp = sendcmd("SIZE " + filename)
+        if resp[0, 3] != "213"
           raise FTPReplyError, resp
         end
-        return get_body(resp).to_i
+        return resp[3..-1].strip.to_i
       end
     end
+
+    MDTM_REGEXP = /^(\d\d\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)/  # :nodoc:
 
     #
     # Returns the last modification time of the (remote) file.  If +local+ is
     # +true+, it is returned as a local time, otherwise it's a UTC time.
     #
     def mtime(filename, local = false)
-      return TIME_PARSER.(mdtm(filename), local)
+      str = mdtm(filename)
+      ary = str.scan(MDTM_REGEXP)[0].collect {|i| i.to_i}
+      return local ? Time.local(*ary) : Time.gm(*ary)
     end
 
     #
     # Creates a remote directory.
     #
     def mkdir(dirname)
-      resp = sendcmd("MKD #{dirname}")
+      resp = sendcmd("MKD " + dirname)
       return parse257(resp)
     end
 
@@ -1065,7 +848,7 @@ module Net
     # Removes a remote directory.
     #
     def rmdir(dirname)
-      voidcmd("RMD #{dirname}")
+      voidcmd("RMD " + dirname)
     end
 
     #
@@ -1082,10 +865,10 @@ module Net
     #
     def system
       resp = sendcmd("SYST")
-      if !resp.start_with?("215")
+      if resp[0, 3] != "215"
         raise FTPReplyError, resp
       end
-      return get_body(resp)
+      return resp[4 .. -1]
     end
 
     #
@@ -1119,9 +902,9 @@ module Net
     # Use +mtime+ if you want a parsed Time instance.
     #
     def mdtm(filename)
-      resp = sendcmd("MDTM #{filename}")
-      if resp.start_with?("213")
-        return get_body(resp)
+      resp = sendcmd("MDTM " + filename)
+      if resp[0, 3] == "213"
+        return resp[3 .. -1].strip
       end
     end
 
@@ -1189,7 +972,7 @@ module Net
     #
     # Returns host and port.
     def parse227(resp) # :nodoc:
-      if !resp.start_with?("227")
+      if resp[0, 3] != "227"
         raise FTPReplyError, resp
       end
       if m = /\((?<host>\d+(,\d+){3}),(?<port>\d+,\d+)\)/.match(resp)
@@ -1205,7 +988,7 @@ module Net
     #
     # Returns host and port.
     def parse228(resp) # :nodoc:
-      if !resp.start_with?("228")
+      if resp[0, 3] != "228"
         raise FTPReplyError, resp
       end
       if m = /\(4,4,(?<host>\d+(,\d+){3}),2,(?<port>\d+,\d+)\)/.match(resp)
@@ -1242,7 +1025,7 @@ module Net
     #
     # Returns host and port.
     def parse229(resp) # :nodoc:
-      if !resp.start_with?("229")
+      if resp[0, 3] != "229"
         raise FTPReplyError, resp
       end
       if m = /\((?<d>[!-~])\k<d>\k<d>(?<port>\d+)\k<d>\)/.match(resp)
@@ -1258,10 +1041,27 @@ module Net
     #
     # Returns host and port.
     def parse257(resp) # :nodoc:
-      if !resp.start_with?("257")
+      if resp[0, 3] != "257"
         raise FTPReplyError, resp
       end
-      return resp.slice(/"(([^"]|"")*)"/, 1).to_s.gsub(/""/, '"')
+      if resp[3, 2] != ' "'
+        return ""
+      end
+      dirname = ""
+      i = 5
+      n = resp.length
+      while i < n
+        c = resp[i, 1]
+        i = i + 1
+        if c == '"'
+          if i > n or resp[i, 1] != '"'
+            break
+          end
+          i = i + 1
+        end
+        dirname = dirname + c
+      end
+      return dirname
     end
     private :parse257
 
@@ -1287,11 +1087,11 @@ module Net
 
       def read(len = nil)
         if len
-          s = super(len, String.new, true)
+          s = super(len, "", true)
           return s.empty? ? nil : s
         else
           result = ""
-          while s = super(DEFAULT_BLOCKSIZE, String.new, true)
+          while s = super(DEFAULT_BLOCKSIZE, "", true)
             break if s.empty?
             result << s
           end

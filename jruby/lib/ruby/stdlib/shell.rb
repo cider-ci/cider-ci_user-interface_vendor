@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   shell.rb -
 #       $Release Version: 0.7 $

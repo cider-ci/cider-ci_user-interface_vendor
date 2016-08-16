@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 #--
 # Copyright 2006 by Chad Fowler, Rich Kilmer, Jim Weirich and others.
 # All rights reserved.
@@ -61,11 +60,13 @@ module Kernel
     #--
     # TODO request access to the C implementation of this to speed up RubyGems
 
-    spec = Gem::Specification.find_active_stub_by_path path
+    spec = Gem::Specification.stubs.find { |s|
+      s.activated? and s.contains_requirable_file? path
+    }
 
     begin
       RUBYGEMS_ACTIVATION_MONITOR.exit
-      return gem_original_require(path)
+      return gem_original_require(spec.to_fullpath(path) || path)
     end if spec
 
     # Attempt to find +path+ in any unresolved gems...
@@ -104,7 +105,7 @@ module Kernel
 
       # Ok, now find a gem that has no conflicts, starting
       # at the highest version.
-      valid = found_specs.reject { |s| s.has_conflicts? }.first
+      valid = found_specs.select { |s| s.conflicts.empty? }.last
 
       unless valid then
         le = Gem::LoadError.new "unable to find a version of '#{names.first}' to activate"
@@ -121,16 +122,13 @@ module Kernel
   rescue LoadError => load_error
     RUBYGEMS_ACTIVATION_MONITOR.enter
 
-    begin
-      if load_error.message.start_with?("Could not find") or
-          (load_error.message.end_with?(path) and Gem.try_activate(path)) then
-        require_again = true
-      end
-    ensure
+    if load_error.message.start_with?("Could not find") or
+        (load_error.message.end_with?(path) and Gem.try_activate(path)) then
+      RUBYGEMS_ACTIVATION_MONITOR.exit
+      return gem_original_require(path)
+    else
       RUBYGEMS_ACTIVATION_MONITOR.exit
     end
-
-    return gem_original_require(path) if require_again
 
     raise load_error
   end

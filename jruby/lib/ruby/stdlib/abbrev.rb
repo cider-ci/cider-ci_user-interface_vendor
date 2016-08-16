@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # Copyright (c) 2001,2003 Akinori MUSHA <knu@iDaemons.org>
 #

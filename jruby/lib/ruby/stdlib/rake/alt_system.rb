@@ -24,13 +24,11 @@
 
 require 'rbconfig'
 
-##
+#
 # Alternate implementations of system() and backticks `` on Windows
 # for ruby-1.8 and earlier.
-#--
-# TODO: Remove in Rake 11
-
-module Rake::AltSystem # :nodoc: all
+#
+module Rake::AltSystem
   WINDOWS = RbConfig::CONFIG["host_os"] =~
     %r!(msdos|mswin|djgpp|mingw|[Ww]indows)!
 

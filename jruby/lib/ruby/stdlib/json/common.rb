@@ -148,7 +148,7 @@ module JSON
   #   the default.
   # * *create_additions*: If set to false, the Parser doesn't create
   #   additions even if a matching class and create_id was found. This option
-  #   defaults to false.
+  #   defaults to true.
   # * *object_class*: Defaults to Hash
   # * *array_class*: Defaults to Array
   def parse(source, opts = {})
@@ -169,7 +169,7 @@ module JSON
   #   to true.
   # * *create_additions*: If set to false, the Parser doesn't create
   #   additions even if a matching class and create_id was found. This option
-  #   defaults to false.
+  #   defaults to true.
   def parse!(source, opts = {})
     opts = {
       :max_nesting  => false,
@@ -390,7 +390,7 @@ module JSON
       end
     end
     opts = JSON.dump_default_options
-    opts = opts.merge(:max_nesting => limit) if limit
+    limit and opts.update(:max_nesting => limit)
     result = generate(obj, opts)
     if anIO
       anIO.write result
@@ -411,8 +411,11 @@ module JSON
     string
   end
 
-  # Shortcut for iconv.
-  if ::String.method_defined?(:encode)
+  # Shortuct for iconv.
+  if ::String.method_defined?(:encode) &&
+    # XXX Rubinius doesn't support ruby 1.9 encoding yet
+    defined?(RUBY_ENGINE) && RUBY_ENGINE != 'rbx'
+  then
     # Encodes string using Ruby's _String.encode_
     def self.iconv(to, from, string)
       string.encode(to, from)
@@ -448,7 +451,7 @@ module ::Kernel
     nil
   end
 
-  # Outputs _objs_ to STDOUT as JSON strings in a pretty format, with
+  # Ouputs _objs_ to STDOUT as JSON strings in a pretty format, with
   # indentation and over many lines.
   def jj(*objs)
     objs.each do |obj|

@@ -5,14 +5,11 @@ module Rake
     include Comparable
     include Singleton
 
-    ##
-    # The EarlyTime always comes before +other+!
-
     def <=>(other)
       -1
     end
 
-    def to_s # :nodoc:
+    def to_s
       "<EARLY TIME>"
     end
   end

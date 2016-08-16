@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # = PStore -- Transactional File Storage for Ruby Objects
 #
 # pstore.rb -
@@ -190,7 +189,7 @@ class PStore
   #  store.transaction do  # begin transaction
   #    # load some data into the store...
   #    store[:single_object] = "My data..."
-  #    store[:obj_hierarchy] = { "Kev Jackson" => ["rational.rb", "pstore.rb"],
+  #    store[:obj_heirarchy] = { "Kev Jackson" => ["rational.rb", "pstore.rb"],
   #                              "James Gray"  => ["erb.rb", "pstore.rb"] }
   #  end                   # commit changes to data store file
   #

@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'rexml/encoding'
 
 module REXML

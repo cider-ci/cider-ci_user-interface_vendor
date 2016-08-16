@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.homepage = "http://i.loveruby.net/en/projects/racc/"
   s.licenses = ["MIT"]
   s.rdoc_options = ["--main", "README.rdoc"]
-  s.rubygems_version = "2.4.8"
+  s.rubygems_version = "2.4.6"
   s.summary = "Racc is a LALR(1) parser generator"
 
   if s.respond_to? :specification_version then

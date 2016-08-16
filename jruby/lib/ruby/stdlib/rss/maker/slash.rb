@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'rss/slash'
 require 'rss/maker/1.0'
 

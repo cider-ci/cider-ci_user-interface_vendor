@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'thread'
 
 # The Singleton module implements the Singleton pattern.

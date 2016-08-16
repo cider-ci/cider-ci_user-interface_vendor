@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # GetoptLong for Ruby
 #
@@ -575,7 +574,7 @@ class GetoptLong
     else
       #
       # This is a non-option argument.
-      # Only RETURN_IN_ORDER fell into here.
+      # Only RETURN_IN_ORDER falled into here.
       #
       return '', argument
     end

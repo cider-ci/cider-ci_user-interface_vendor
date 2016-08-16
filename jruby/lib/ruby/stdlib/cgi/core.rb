@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # Methods for generating HTML, parsing CGI-related parameters, and
 # generating HTTP responses.

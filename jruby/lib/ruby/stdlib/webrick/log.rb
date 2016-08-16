@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # log.rb -- Log Class
 #

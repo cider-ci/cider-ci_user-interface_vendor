@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require "rexml/dtd/elementdecl"
 require "rexml/dtd/entitydecl"
 require "rexml/comment"

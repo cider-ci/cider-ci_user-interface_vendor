@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 class CGI
   # Base module for HTML-generation mixins.
   #

@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/ext/cb.rb -
 #   	$Release Version: 0.9.6$

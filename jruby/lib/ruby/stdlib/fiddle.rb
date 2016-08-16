@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'fiddle.so' unless RUBY_ENGINE == 'jruby'
 require 'fiddle/jruby' if RUBY_ENGINE == 'jruby'
 require 'fiddle/function'

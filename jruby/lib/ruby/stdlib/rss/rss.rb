@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require "time"
 
 class Time
@@ -54,7 +53,7 @@ class Time
       if usec.zero?
         fraction_digits = 0
       else
-        fraction_digits = strftime('%6N').index(/0*\z/)
+        fraction_digits = Math.log10(usec.to_s.sub(/0*$/, '').to_i).floor + 1
       end
       xmlschema(fraction_digits)
     end

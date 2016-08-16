@@ -5,12 +5,7 @@ require 'rake/file_list'
 module Rake
   include Test::Unit::Assertions
 
-  ##
-  # Deprecated way of running tests in process, but only for Test::Unit.
-  #--
-  # TODO: Remove in rake 11
-
-  def run_tests(pattern='test/test*.rb', log_enabled=false) # :nodoc:
+  def run_tests(pattern='test/test*.rb', log_enabled=false)
     FileList.glob(pattern).each do |fn|
       $stderr.puts fn if log_enabled
       begin

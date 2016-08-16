@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 module URI
   class RFC3986_Parser # :nodoc:
     # URI defined in RFC3986

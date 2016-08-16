@@ -11,27 +11,27 @@ module Rake
   #
   # The PackageTask will create the following targets:
   #
-  # +:package+ ::
+  # [<b>:package</b>]
   #   Create all the requested package files.
   #
-  # +:clobber_package+ ::
+  # [<b>:clobber_package</b>]
   #   Delete all the package files.  This target is automatically
   #   added to the main clobber target.
   #
-  # +:repackage+ ::
+  # [<b>:repackage</b>]
   #   Rebuild the package files from scratch, even if they are not out
   #   of date.
   #
-  # <tt>"<em>package_dir</em>/<em>name</em>-<em>version</em>.tgz"</tt> ::
+  # [<b>"<em>package_dir</em>/<em>name</em>-<em>version</em>.tgz"</b>]
   #   Create a gzipped tar package (if <em>need_tar</em> is true).
   #
-  # <tt>"<em>package_dir</em>/<em>name</em>-<em>version</em>.tar.gz"</tt> ::
+  # [<b>"<em>package_dir</em>/<em>name</em>-<em>version</em>.tar.gz"</b>]
   #   Create a gzipped tar package (if <em>need_tar_gz</em> is true).
   #
-  # <tt>"<em>package_dir</em>/<em>name</em>-<em>version</em>.tar.bz2"</tt> ::
+  # [<b>"<em>package_dir</em>/<em>name</em>-<em>version</em>.tar.bz2"</b>]
   #   Create a bzip2'd tar package (if <em>need_tar_bz2</em> is true).
   #
-  # <tt>"<em>package_dir</em>/<em>name</em>-<em>version</em>.zip"</tt> ::
+  # [<b>"<em>package_dir</em>/<em>name</em>-<em>version</em>.zip"</b>]
   #   Create a zip package archive (if <em>need_zip</em> is true).
   #
   # Example:
@@ -127,7 +127,7 @@ module Rake
           file "#{package_dir}/#{file}" =>
             [package_dir_path] + package_files do
             chdir(package_dir) do
-              sh @tar_command, "#{flag}cvf", file, package_name
+              sh %{#{@tar_command} #{flag}cvf #{file} #{package_name}}
             end
           end
         end
@@ -138,12 +138,15 @@ module Rake
         file "#{package_dir}/#{zip_file}" =>
           [package_dir_path] + package_files do
           chdir(package_dir) do
-            sh @zip_command, "-r", zip_file, package_name
+            sh %{#{@zip_command} -r #{zip_file} #{package_name}}
           end
         end
       end
 
-      directory package_dir_path => @package_files do
+      directory package_dir
+
+      file package_dir_path => @package_files do
+        mkdir_p package_dir rescue nil
         @package_files.each do |fn|
           f = File.join(package_dir_path, fn)
           fdir = File.dirname(f)
@@ -159,37 +162,25 @@ module Rake
       self
     end
 
-    # The name of this package
-
     def package_name
       @version ? "#{@name}-#{@version}" : @name
     end
-
-    # The directory this package will be built in
 
     def package_dir_path
       "#{package_dir}/#{package_name}"
     end
 
-    # The package name with .tgz added
-
     def tgz_file
       "#{package_name}.tgz"
     end
-
-    # The package name with .tar.gz added
 
     def tar_gz_file
       "#{package_name}.tar.gz"
     end
 
-    # The package name with .tar.bz2 added
-
     def tar_bz2_file
       "#{package_name}.tar.bz2"
     end
-
-    # The package name with .zip added
 
     def zip_file
       "#{package_name}.zip"

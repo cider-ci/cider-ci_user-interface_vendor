@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # httpauth/basicauth.rb -- HTTP basic access authentication
 #
@@ -90,7 +89,8 @@ module WEBrick
       end
 
       ##
-      # Returns a challenge response which asks for authentication information
+      # Returns a challenge response which asks for for authentication
+      # information
 
       def challenge(req, res)
         res[@response_field] = "#{@auth_scheme} realm=\"#{@realm}\""

@@ -4,12 +4,9 @@ module Rake
   module TaskManager
     # Track the last comment made in the Rakefile.
     attr_accessor :last_description
+    alias :last_comment :last_description    # Backwards compatibility
 
-    # TODO: Remove in Rake 11
-
-    alias :last_comment :last_description # :nodoc: Backwards compatibility
-
-    def initialize # :nodoc:
+    def initialize
       super
       @tasks = Hash.new
       @rules = Array.new
@@ -17,25 +14,17 @@ module Rake
       @last_description = nil
     end
 
-    def create_rule(*args, &block) # :nodoc:
+    def create_rule(*args, &block)
       pattern, args, deps = resolve_args(args)
       pattern = Regexp.new(Regexp.quote(pattern) + '$') if String === pattern
       @rules << [pattern, args, deps, block]
     end
 
-    def define_task(task_class, *args, &block) # :nodoc:
+    def define_task(task_class, *args, &block)
       task_name, arg_names, deps = resolve_args(args)
-
-      original_scope = @scope
-      if String === task_name and
-         not task_class.ancestors.include? Rake::FileTask then
-        task_name, *definition_scope = *(task_name.split(":").reverse)
-        @scope = Scope.make(*(definition_scope + @scope.to_a))
-      end
-
       task_name = task_class.scope_name(@scope, task_name)
       deps = [deps] unless deps.respond_to?(:to_ary)
-      deps = deps.map { |d| Rake.from_pathname(d).to_s }
+      deps = deps.map { |d| d.to_s }
       task = intern(task_class, task_name)
       task.set_arg_names(arg_names) unless arg_names.empty?
       if Rake::TaskManager.record_task_metadata
@@ -43,8 +32,6 @@ module Rake
         task.add_description(get_description(task))
       end
       task.enhance(deps, &block)
-    ensure
-      @scope = original_scope
     end
 
     # Lookup a task.  Return an existing task if found, otherwise
@@ -62,7 +49,7 @@ module Rake
         fail "Don't know how to build task '#{task_name}'"
     end
 
-    def synthesize_file_task(task_name) # :nodoc:
+    def synthesize_file_task(task_name)
       return nil unless File.exist?(task_name)
       define_task(Rake::FileTask, task_name)
     end
@@ -111,7 +98,7 @@ module Rake
       if args.empty?
         task_name = key
         arg_names = []
-        deps = value || []
+        deps = value
       else
         task_name = args.shift
         arg_names = key
@@ -239,7 +226,7 @@ module Rake
       "_anon_#{@seed}"
     end
 
-    def trace_rule(level, message) # :nodoc:
+    def trace_rule(level, message)
       options.trace_output.puts "#{"    " * level}#{message}" if
         Rake.application.options.trace_rules
     end
@@ -278,7 +265,7 @@ module Rake
           task_name.ext(ext)
         when String
           ext
-        when Proc, Method
+        when Proc
           if ext.arity == 1
             ext.call(task_name)
           else
@@ -302,7 +289,7 @@ module Rake
     end
 
     class << self
-      attr_accessor :record_task_metadata # :nodoc:
+      attr_accessor :record_task_metadata
       TaskManager.record_task_metadata = false
     end
   end

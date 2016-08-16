@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/workspace-binding.rb -
 #   	$Release Version: 0.9.6$

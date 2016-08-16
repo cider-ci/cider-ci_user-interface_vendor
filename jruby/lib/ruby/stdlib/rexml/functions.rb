@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 module REXML
   # If you add a method, keep in mind two things:
   # (1) the first argument will always be a list of nodes from which to

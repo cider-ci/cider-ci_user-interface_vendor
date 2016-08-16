@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # Copyright (c) 2000,2002,2003 Masatoshi SEKI
 #
 # acl.rb is copyrighted free software by Masatoshi SEKI.

@@ -17,7 +17,7 @@ Gem::Specification.new do |s|
   s.homepage = "https://github.com/seattlerb/minitest"
   s.licenses = ["MIT"]
   s.rdoc_options = ["--main", "README.txt"]
-  s.rubygems_version = "2.4.8"
+  s.rubygems_version = "2.4.6"
   s.summary = "minitest provides a complete suite of testing facilities supporting TDD, BDD, mocking, and benchmarking"
   s.test_files = ["test/minitest/test_minitest_benchmark.rb", "test/minitest/test_minitest_mock.rb", "test/minitest/test_minitest_reporter.rb", "test/minitest/test_minitest_spec.rb", "test/minitest/test_minitest_unit.rb"]
 

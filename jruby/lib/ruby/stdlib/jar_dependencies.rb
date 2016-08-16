@@ -28,8 +28,6 @@ module Jars
     HOME = 'JARS_HOME'.freeze
     # skip the gem post install hook
     SKIP = 'JARS_SKIP'.freeze
-    # skip Jars.lock mainly to run lock_jars
-    SKIP_LOCK = 'JARS_SKIP_LOCK'.freeze
     # do not require any jars if set to false
     REQUIRE = 'JARS_REQUIRE'.freeze
     # @private
@@ -49,11 +47,8 @@ module Jars
   class << self
 
     def lock_down( debug = false, verbose = false, options = {} )
-      ENV[ SKIP_LOCK ] = 'true'
       require 'jars/lock_down' # do this lazy to keep things clean
       Jars::LockDown.new( debug, verbose ).lock_down( options )
-    ensure
-      ENV[ SKIP_LOCK ] = nil
     end
 
     if defined? JRUBY_VERSION
@@ -122,20 +117,8 @@ module Jars
       self.require = false
     end
 
-    def skip_lock?
-      to_prop( SKIP_LOCK ) || false
-    end
-
     def lock
       to_prop( LOCK ) || 'Jars.lock'
-    end
-
-    def jars_lock_from_class_loader
-      if to_prop( LOCK ).nil? && defined?(JRUBY_VERSION)
-        JRuby.runtime.jruby_class_loader.get_resources( 'Jars.lock' ).collect do |url|
-          url.to_s
-        end
-      end
     end
 
     def lock_path( basedir = nil )
@@ -149,33 +132,23 @@ module Jars
       nil
     end
 
+    def local_maven_repo
+      to_prop( LOCAL_MAVEN_REPO ) || home
+    end
+
     def reset
       instance_variables.each { |var| instance_variable_set(var, nil) }
       ( @@jars ||= {} ).clear
-    end
-
-    def maven_local_settings
-      unless instance_variable_defined?(:@_jars_maven_local_settings_)
-        @_jars_maven_local_settings_ = nil
-      end
-      if @_jars_maven_local_settings_.nil?
-        if settings = absolute( 'settings.xml' )
-          if File.exists?(settings)
-            @_jars_maven_local_settings_ = settings
-          end
-        end
-      end
-      @_jars_maven_local_settings_ || nil
     end
 
     def maven_user_settings
       unless instance_variable_defined?(:@_jars_maven_user_settings_)
         @_jars_maven_user_settings_ = nil
       end
-      if @_jars_maven_user_settings_.nil?
+      if ( @_jars_maven_user_settings_ ||= nil ).nil?
         if settings = absolute( to_prop( MAVEN_SETTINGS ) )
           unless File.exists?(settings)
-            Jars.warn { "configured ENV['#{MAVEN_SETTINGS}'] = '#{settings}' not found" }
+            warn "configured ENV['#{MAVEN_SETTINGS}'] = '#{settings}' not found"
             settings = false
           end
         else # use maven default (user) settings
@@ -186,10 +159,7 @@ module Jars
       end
       @_jars_maven_user_settings_ || nil
     end
-
-    def maven_settings
-      maven_local_settings || maven_user_settings
-    end
+    alias maven_settings maven_user_settings
 
     def maven_global_settings
       unless instance_variable_defined?(:@_jars_maven_global_settings_)
@@ -207,40 +177,15 @@ module Jars
       @_jars_maven_global_settings_ || nil
     end
 
-    def local_maven_repo
-      @_local_maven_repo ||= absolute(to_prop(LOCAL_MAVEN_REPO)) ||
-                             detect_local_repository(maven_local_settings) ||
-                             detect_local_repository(maven_user_settings) ||
-                             detect_local_repository(maven_global_settings) ||
-                             File.join( user_home, '.m2', 'repository' )
-    end
-
     def home
-      @_jars_home_ ||= absolute(to_prop(HOME)) || local_maven_repo
+      @_jars_home_ ||= absolute(to_prop(HOME)) ||
+                       detect_local_repository(maven_user_settings) ||
+                       detect_local_repository(maven_global_settings) ||
+                       File.join( user_home, '.m2', 'repository' )
     end
 
     def require_jars_lock!( scope = :runtime )
-      urls = jars_lock_from_class_loader
-      if urls and urls.size > 0
-        @@jars_lock = true
-        # funny error during spec where it tries to load it again
-        # and finds it as gem instead of the LOAD_PATH
-        require 'jars/classpath' unless defined? Jars::Classpath
-        done = []
-        while done != urls do
-          urls.each do |url|
-            unless done.member?( url )
-              Jars.debug { "--- load jars from uri #{url}" }
-              classpath = Jars::Classpath.new( nil, "uri:#{url}" )
-              classpath.require( scope )
-              done << url
-            end
-          end
-          urls = jars_lock_from_class_loader
-        end
-        no_more_warnings
-      elsif jars_lock = Jars.lock_path
-        Jars.debug { "--- load jars from #{jars_lock}" }
+      if jars_lock = Jars.lock_path
         @@jars_lock = jars_lock
         # funny error during spec where it tries to load it again
         # and finds it as gem instead of the LOAD_PATH
@@ -249,11 +194,6 @@ module Jars
         classpath.require( scope )
         no_more_warnings
       end
-      Jars.debug {
-        @@jars ||= {}
-        loaded = @@jars.collect{ |k,v| "#{k}:#{v}" }
-        "--- loaded jars ---\n\t#{loaded.join("\n\t")}"
-      }
     end
 
     def setup( options = nil )
@@ -283,18 +223,14 @@ module Jars
     end
 
     def require_jar( group_id, artifact_id, *classifier_version )
-      require_jars_lock unless skip_lock?
+      require_jars_lock
       require_jar_with_block( group_id, artifact_id, *classifier_version ) do |gid, aid, version, classifier|
         do_require( gid, aid, version, classifier )
       end
     end
 
-    def warn(msg = nil, &block)
-      Kernel.warn(msg || block.call) unless quiet? and not verbose?
-    end
-
-    def debug(msg = nil, &block)
-      Kernel.warn(msg || block.call) if verbose?
+    def warn(msg)
+      Kernel.warn(msg) unless quiet?
     end
 
     private
@@ -348,7 +284,7 @@ module Jars
       end
       local_repo
     rescue
-      Jars.warn { "error reading or parsing #{settings}" }
+      warn "error reading or parsing #{settings}"
       nil
     end
 
@@ -361,18 +297,10 @@ module Jars
 
     def do_require( *args )
       jar = to_jar( *args )
-      local = File.join( Dir.pwd, 'jars', jar )
-      vendor = File.join( Dir.pwd, 'vendor', 'jars', jar )
       file = File.join( home, jar )
       # use jar from local repository if exists
       if File.exists?( file )
         require file
-      # use jar from PWD/jars if exists
-      elsif File.exists?( local )
-        require local
-      # use jar from PWD/vendor/jars if exists
-      elsif File.exists?( vendor )
-        require vendor
       else
         # otherwise try to find it on the load path
         require jar
@@ -389,8 +317,7 @@ def require_jar( *args )
   return nil unless Jars.require?
   result = Jars.require_jar( *args )
   if result.is_a? String
-    Jars.warn { "--- jar coordinate #{args[0..-2].join( ':' )} already loaded with version #{result} - omit version #{args[-1]}" }
-    Jars.debug { "    try to load from #{caller.join("\n\t")}" }
+    Jars.warn "jar coordinate #{args[0..-2].join( ':' )} already loaded with version #{result}"
     return false
   end
   result

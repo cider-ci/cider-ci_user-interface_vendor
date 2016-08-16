@@ -9,7 +9,7 @@ module Jars
       attr_reader :path, :file, :gav, :scope, :type, :coord
 
       def self.new( line )
-        if line.match( /:jar:|:pom:/ )
+        if line.match /:jar:|:pom:/
           super
         end
       end
@@ -65,7 +65,11 @@ module Jars
     def self.install_jars( write_require_file = false )
       new.install_jars( write_require_file )
     end
-    
+
+    def self.vendor_jars( write_require_file = false )
+      new.vendor_jars( write_require_file )
+    end
+
     def self.load_from_maven( file )
       result = []
       File.read( file ).each_line do |line|
@@ -111,7 +115,8 @@ module Jars
 
     COMMENT = '# this is a generated file, to avoid over-writing it just delete this comment'
     def self.needs_to_write?(require_filename)
-      require_filename and (not File.exists?( require_filename ) or File.read( require_filename ).match( COMMENT))
+      ( require_filename and not File.exists?( require_filename ) ) or
+        File.read( require_filename ).match( COMMENT)
     end
 
     def self.install_deps( deps, dir, require_filename, vendor )
@@ -149,21 +154,15 @@ module Jars
 
     def vendor_jars( write_require_file = true )
       return unless has_jars?
-      vendor_jars!( write_require_file )
-    end
-
-    def self.vendor_jars!
-      new.vendor_jars!
-    end
-
-    def vendor_jars!( write_require_file = true )
       case Jars.to_prop( Jars::VENDOR )
       when 'true'
         do_vendor = true
       when 'false'
         do_vendor = false
       else
-        do_vendor = true
+        # if the spec_file does not exists this means it is a local gem
+        # coming via bundle :path or :git
+        do_vendor = File.exists?( spec.spec_file )
       end
       do_install( do_vendor, write_require_file )
     end

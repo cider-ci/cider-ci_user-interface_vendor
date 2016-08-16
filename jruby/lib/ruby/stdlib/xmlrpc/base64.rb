@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # xmlrpc/base64.rb
 # Copyright (C) 2001, 2002, 2003 by Michael Neumann (mneumann@ntecs.de)

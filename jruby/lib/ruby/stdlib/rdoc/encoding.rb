@@ -29,9 +29,7 @@ module RDoc::Encoding
         encoding ||= Encoding.default_external
         orig_encoding = content.encoding
 
-        if not orig_encoding.ascii_compatible? then
-          content.encode! encoding
-        elsif utf8 then
+        if utf8 then
           content.force_encoding Encoding::UTF_8
           content.encode! encoding
         else

@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/version.rb - irb version definition file
 #   	$Release Version: 0.9.6$

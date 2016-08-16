@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'rexml/xmltokens'
 
 # [ :element, parent, name, attributes, children* ]

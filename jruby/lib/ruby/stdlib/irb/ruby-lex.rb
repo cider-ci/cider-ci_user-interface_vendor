@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/ruby-lex.rb - ruby lexcal analyzer
 #   	$Release Version: 0.9.6$
@@ -406,7 +405,7 @@ class RubyLex
       if @lex_state != EXPR_END && @lex_state != EXPR_CLASS &&
           (@lex_state != EXPR_ARG || @space_seen)
         c = peek(0)
-        if /\S/ =~ c && (/["'`]/ =~ c || /\w/ =~ c || c == "-" || c == "~")
+        if /\S/ =~ c && (/["'`]/ =~ c || /\w/ =~ c || c == "-")
           tk = identify_here_document
         end
       end
@@ -855,7 +854,7 @@ class RubyLex
 
   def identify_here_document
     ch = getc
-    if ch == "-" || ch == "~"
+    if ch == "-"
       ch = getc
       indent = true
     end

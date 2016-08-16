@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # $Id$
 #
@@ -45,54 +44,26 @@ class Ripper
   end
 
   class Lexer < ::Ripper   #:nodoc: internal use only
-    Elem = Struct.new(:pos, :event, :tok)
-
     def tokenize
-      parse().sort_by(&:pos).map(&:tok)
+      lex().map {|pos, event, tok| tok }
     end
 
     def lex
-      parse().sort_by(&:pos).map(&:to_a)
+      parse().sort_by {|pos, event, tok| pos }
     end
 
     def parse
       @buf = []
-      @stack = []
       super
-      @buf.flatten!
       @buf
     end
 
     private
 
-    def on_heredoc_dedent(v, w)
-      @buf.last.each do |e|
-        if e.event == :on_tstring_content
-          if (n = dedent_string(e.tok, w)) > 0
-            e.pos[1] += n
-          end
-        end
-      end
-      v
-    end
-
-    def on_heredoc_beg(tok)
-      @stack.push @buf
-      buf = []
-      @buf << buf
-      @buf = buf
-      @buf.push Elem.new([lineno(), column()], __callee__, tok)
-    end
-
-    def on_heredoc_end(tok)
-      @buf.push Elem.new([lineno(), column()], __callee__, tok)
-      @buf = @stack.pop
-    end
-
-    (SCANNER_EVENTS.map {|event|:"on_#{event}"} - private_instance_methods(false)).each do |event|
+    SCANNER_EVENTS.each do |event|
       module_eval(<<-End, __FILE__+'/module_eval', __LINE__ + 1)
-        def #{event}(tok)
-          @buf.push Elem.new([lineno(), column()], :#{event}, tok)
+        def on_#{event}(tok)
+          @buf.push [[lineno(), column()], :on_#{event}, tok]
         end
       End
     end

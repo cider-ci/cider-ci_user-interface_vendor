@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/inspector.rb - inspect methods
 #   	$Release Version: 0.9.6$

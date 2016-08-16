@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # ipaddr.rb - A class to manipulate an IP address
 #
@@ -411,7 +410,7 @@ class IPAddr
   # Set current netmask to given mask.
   def mask!(mask)
     if mask.kind_of?(String)
-      if mask =~ /\A\d+\z/
+      if mask =~ /^\d+$/
         prefixlen = mask.to_i
       else
         m = IPAddr.new(mask)
@@ -479,7 +478,7 @@ class IPAddr
       end
     end
     prefix, prefixlen = addr.split('/')
-    if prefix =~ /\A\[(.*)\]\z/i
+    if prefix =~ /^\[(.*)\]$/i
       prefix = $1
       family = Socket::AF_INET6
     end

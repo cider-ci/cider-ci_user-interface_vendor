@@ -1,4 +1,5 @@
 #--
+
 # Copyright 2003-2010 by Jim Weirich (jim.weirich@gmail.com)
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,14 +21,9 @@
 # IN THE SOFTWARE.
 #++
 
-module Rake
-  VERSION = '10.4.2'
-end
-
 require 'rake/version'
 
 # :stopdoc:
-# TODO: Remove in Rake 11
 RAKEVERSION = Rake::VERSION
 # :startdoc:
 
@@ -45,7 +41,6 @@ require 'rake/ext/time'
 require 'rake/win32'
 
 require 'rake/linked_list'
-require 'rake/cpu_counter'
 require 'rake/scope'
 require 'rake/task_argument_error'
 require 'rake/rule_recursion_overflow_error'
@@ -63,7 +58,6 @@ require 'rake/file_utils_ext'
 require 'rake/file_list'
 require 'rake/default_loader'
 require 'rake/early_time'
-require 'rake/late_time'
 require 'rake/name_space'
 require 'rake/task_manager'
 require 'rake/application'

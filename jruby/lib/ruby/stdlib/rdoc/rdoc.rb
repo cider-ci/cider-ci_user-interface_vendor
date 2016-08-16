@@ -305,9 +305,6 @@ option)
       when "directory" then
         next if rel_file_name == "CVS" || rel_file_name == ".svn"
 
-        created_rid = File.join rel_file_name, "created.rid"
-        next if File.file? created_rid
-
         dot_doc = File.join rel_file_name, RDoc::DOT_DOC_FILENAME
 
         if File.file? dot_doc then
@@ -339,7 +336,7 @@ option)
   # Parses +filename+ and returns an RDoc::TopLevel
 
   def parse_file filename
-    if Object.const_defined? :Encoding then
+    if defined?(Encoding) then
       encoding = @options.encoding
       filename = filename.encode encoding
     end
@@ -413,6 +410,8 @@ The internal error was:
     @stats = RDoc::Stats.new @store, file_list.length, @options.verbosity
 
     return [] if file_list.empty?
+
+    file_info = []
 
     @stats.begin_adding
 
@@ -566,5 +565,4 @@ end
 # require built-in generators after discovery in case they've been replaced
 require 'rdoc/generator/darkfish'
 require 'rdoc/generator/ri'
-require 'rdoc/generator/pot'
 

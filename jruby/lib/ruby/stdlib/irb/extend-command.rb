@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/extend-command.rb - irb extend command
 #   	$Release Version: 0.9.6$

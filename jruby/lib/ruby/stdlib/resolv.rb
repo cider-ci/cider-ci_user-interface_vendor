@@ -1,9 +1,6 @@
-# frozen_string_literal: true
-
 require 'socket'
 require 'timeout'
 require 'thread'
-require 'io/wait'
 
 begin
   require 'securerandom'
@@ -37,10 +34,10 @@ end
 # * /etc/nsswitch.conf is not supported.
 
 class Resolv
-  
+
   ##
   # Tests whether we're running on Windows
-  
+
   WINDOWS = /mswin|cygwin|mingw|bccwin/ =~ RUBY_PLATFORM || ::RbConfig::CONFIG['host_os'] =~ /mswin/
 
   ##
@@ -673,7 +670,7 @@ class Resolv
       end
 
       def request(sender, tout)
-        start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        start = Time.now
         timelimit = start + tout
         begin
           sender.send
@@ -682,18 +679,14 @@ class Resolv
           raise ResolvTimeout
         end
         while true
-          before_select = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+          before_select = Time.now
           timeout = timelimit - before_select
           if timeout <= 0
             raise ResolvTimeout
           end
-          if @socks.size == 1
-            select_result = @socks[0].wait_readable(timeout) ? [ @socks ] : nil
-          else
-            select_result = IO.select(@socks, nil, nil, timeout)
-          end
+          select_result = IO.select(@socks, nil, nil, timeout)
           if !select_result
-            after_select = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+            after_select = Time.now
             next if after_select < timelimit
             raise ResolvTimeout
           end
@@ -1181,9 +1174,7 @@ class Resolv
       class Str # :nodoc:
         def initialize(string)
           @string = string
-          # case insensivity of DNS labels doesn't apply non-ASCII characters. [RFC 4343]
-          # This assumes @string is given in ASCII compatible encoding.
-          @downcase = string.b.downcase
+          @downcase = string.downcase
         end
         attr_reader :string, :downcase
 
@@ -1432,7 +1423,7 @@ class Resolv
 
       class MessageEncoder # :nodoc:
         def initialize
-          @data = ''.dup
+          @data = ''
           @names = {}
           yield self
         end
@@ -1480,9 +1471,7 @@ class Resolv
               self.put_pack("n", 0xc000 | idx)
               return
             else
-              if @data.length < 0x4000
-                @names[domain] = @data.length
-              end
+              @names[domain] = @data.length
               self.put_label(d[i])
             end
           }

@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # = uri/http.rb
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>

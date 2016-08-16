@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   shell/builtin-command.rb -
 #       $Release Version: 0.7 $

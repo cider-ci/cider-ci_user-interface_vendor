@@ -1,5 +1,3 @@
-# frozen_string_literal: true
-
 # = uri/generic.rb
 #
 # Author:: Akira Yamada <akira@ruby-lang.org>
@@ -545,7 +543,7 @@ module URI
     # if properly formatted as 'user:password'
     def split_userinfo(ui)
       return nil, nil unless ui
-      user, password = ui.split(':', 2)
+      user, password = ui.split(':'.freeze, 2)
 
       return user, password
     end
@@ -764,13 +762,13 @@ module URI
 
       # If scheme is ftp, path may be relative.
       # See RFC 1738 section 3.2.2, and RFC 2396.
-      if @scheme && @scheme != "ftp"
-        if v && v != '' && parser.regexp[:ABS_PATH] !~ v
+      if @scheme && @scheme != "ftp".freeze
+        if v && v != ''.freeze && parser.regexp[:ABS_PATH] !~ v
           raise InvalidComponentError,
             "bad component(expected absolute path component): #{v}"
         end
       else
-        if v && v != '' && parser.regexp[:ABS_PATH] !~ v &&
+        if v && v != ''.freeze && parser.regexp[:ABS_PATH] !~ v &&
            parser.regexp[:REL_PATH] !~ v
           raise InvalidComponentError,
             "bad component(expected relative path component): #{v}"
@@ -846,9 +844,9 @@ module URI
       x = v.to_str
       v = x.dup if x.equal? v
       v.encode!(Encoding::UTF_8) rescue nil
-      v.delete!("\t\r\n")
+      v.delete!("\t\r\n".freeze)
       v.force_encoding(Encoding::ASCII_8BIT)
-      v.gsub!(/(?!%\h\h|[!$-&(-;=?-_a-~])./n.freeze){'%%%02X' % $&.ord}
+      v.gsub!(/(?!%\h\h|[!$-&(-;=?-_a-~])./n.freeze){'%%%02X'.freeze % $&.ord}
       v.force_encoding(Encoding::US_ASCII)
       @query = v
     end
@@ -936,9 +934,9 @@ module URI
       x = v.to_str
       v = x.dup if x.equal? v
       v.encode!(Encoding::UTF_8) rescue nil
-      v.delete!("\t\r\n")
+      v.delete!("\t\r\n".freeze)
       v.force_encoding(Encoding::ASCII_8BIT)
-      v.gsub!(/(?!%\h\h|[!-~])./n){'%%%02X' % $&.ord}
+      v.gsub!(/(?!%\h\h|[!-~])./n){'%%%02X'.freeze % $&.ord}
       v.force_encoding(Encoding::US_ASCII)
       @fragment = v
     end
@@ -1326,7 +1324,7 @@ module URI
     # Destructive version of #normalize
     #
     def normalize!
-      if path&.empty?
+      if path && path.empty?
         set_path('/')
       end
       if scheme && scheme != scheme.downcase
@@ -1341,37 +1339,37 @@ module URI
     # Constructs String from URI
     #
     def to_s
-      str = String.new
+      str = ''
       if @scheme
         str << @scheme
-        str << ':'
+        str << ':'.freeze
       end
 
       if @opaque
         str << @opaque
       else
         if @host
-          str << '//'
+          str << '//'.freeze
         end
         if self.userinfo
           str << self.userinfo
-          str << '@'
+          str << '@'.freeze
         end
         if @host
           str << @host
         end
         if @port && @port != self.default_port
-          str << ':'
+          str << ':'.freeze
           str << @port.to_s
         end
         str << @path
         if @query
-          str << '?'
+          str << '?'.freeze
           str << @query
         end
       end
       if @fragment
-        str << '#'
+        str << '#'.freeze
         str << @fragment
       end
       str
@@ -1522,21 +1520,7 @@ module URI
           proxy_uri = ENV["CGI_#{name.upcase}"]
         end
       elsif name == 'http_proxy'
-        if p_addr = ENV_JAVA['http.proxyHost']
-          p_port = ENV_JAVA['http.proxyPort']
-          if p_user = ENV_JAVA['http.proxyUser']
-            p_pass = ENV_JAVA['http.proxyPass']
-            proxy_uri = "http://#{p_user}:#{p_pass}@#{p_addr}:#{p_port}"
-          else
-            proxy_uri = "http://#{p_addr}:#{p_port}"
-          end
-        else
-          unless proxy_uri = ENV[name]
-            if proxy_uri = ENV[name.upcase]
-              warn 'The environment variable HTTP_PROXY is discouraged.  Use http_proxy.'
-            end
-          end
-        end
+        proxy_uri = http_proxy_from_env
       else
         proxy_uri = ENV[name] || ENV[name.upcase]
       end
@@ -1554,8 +1538,7 @@ module URI
         end
       end
 
-      name = 'no_proxy'
-      if no_proxy = ENV[name] || ENV[name.upcase]
+      if no_proxy = no_proxy_from_env
         no_proxy.scan(/([^:,]*)(?::(\d+))?/) {|host, port|
           if /(\A|\.)#{Regexp.quote host}\z/i =~ self.host &&
             (!port || self.port == port.to_i)
@@ -1565,5 +1548,44 @@ module URI
       end
       URI.parse(proxy_uri)
     end
+
+    def http_proxy_from_env
+      proxy_host = ENV_JAVA['http.proxyHost']
+
+      if proxy_host
+        begin
+          proxy_port = (ENV_JAVA['http.proxyPort'] || 80).to_i
+          if proxy_port > 0
+            proxy_uri = "http://#{proxy_host}:#{proxy_port}"
+          else
+            warn "invalid http.proxyPort property: #{ENV_JAVA['http.proxyPort']}"
+          end
+        end
+      end
+
+      if proxy_uri.nil? || proxy_uri.empty?
+        proxy_uri = ENV['http_proxy']
+
+        if proxy_uri.nil? && (proxy_uri = ENV['HTTP_PROXY'])
+          warn 'The environment variable HTTP_PROXY is discouraged.  Use http_proxy.'
+        end
+      end
+
+      proxy_uri
+    end
+    private :http_proxy_from_env
+
+    DEFAULT_JVM_NON_PROXY_HOSTS = "local|*.local|169.254/16|*.169.254/16|127.0.0.1|localhost|*.localhost"
+    def no_proxy_from_env
+      no_proxy = ENV_JAVA['http.nonProxyHosts']
+
+      if no_proxy.nil? || no_proxy.empty?
+        name = "no_proxy"
+        no_proxy = ENV[name] || ENV[name.upcase]
+      end
+
+      no_proxy
+    end
+    private :no_proxy_from_env
   end
 end

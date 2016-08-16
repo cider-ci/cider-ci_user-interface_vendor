@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   output-method.rb - output methods used by irb
 #   	$Release Version: 0.9.6$

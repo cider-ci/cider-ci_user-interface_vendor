@@ -19,22 +19,16 @@ module Test
           @@default_for_8_colors ||=
             new("pass" => Color.new("green", :background => true) +
                           Color.new("white", :bold => true),
-                "pass-marker" => Color.new("green", :bold => true),
                 "failure" => Color.new("red", :background => true) +
                              Color.new("white", :bold => true),
-                "failure-marker" => Color.new("red"),
                 "pending" => Color.new("magenta", :background => true) +
                              Color.new("white", :bold => true),
-                "pending-marker" => Color.new("magenta"),
                 "omission" => Color.new("blue", :background => true) +
                              Color.new("white", :bold => true),
-                "omission-marker" => Color.new("blue"),
                 "notification" => Color.new("cyan", :background => true) +
                                   Color.new("white", :bold => true),
-                "notification-marker" => Color.new("cyan"),
                 "error" => Color.new("black", :background => true) +
                            Color.new("yellow", :bold => true),
-                "error-marker" => Color.new("yellow"),
                 "case" => Color.new("blue", :background => true) +
                           Color.new("white", :bold => true),
                 "suite" => Color.new("green", :background => true) +
@@ -56,22 +50,16 @@ module Test
           @@default_for_256_colors ||=
             new("pass" => Color.new("030", :background => true) +
                           Color.new("555", :bold => true),
-                "pass-marker" => Color.new("050", :bold => true),
                 "failure" => Color.new("300", :background => true) +
                              Color.new("555", :bold => true),
-                "failure-marker" => Color.new("500"),
                 "pending" => Color.new("303", :background => true) +
                               Color.new("555", :bold => true),
-                "pending-marker" => Color.new("303"),
                 "omission" => Color.new("001", :background => true) +
                               Color.new("555", :bold => true),
-                "omission-marker" => Color.new("001"),
                 "notification" => Color.new("011", :background => true) +
                                   Color.new("555", :bold => true),
-                "notification-marker" => Color.new("011"),
                 "error" => Color.new("000", :background => true) +
                            Color.new("550", :bold => true),
-                "error-marker" => Color.new("550"),
                 "case" => Color.new("220", :background => true) +
                           Color.new("555", :bold => true),
                 "suite" => Color.new("110", :background => true) +
@@ -107,43 +95,16 @@ module Test
         end
 
         def available_colors
-          guess_available_colors_from_vte_version_env ||
-            guess_available_colors_from_colorterm_env ||
-            guess_available_colors_from_term_env ||
-            8
-        end
-
-        private
-        def guess_available_colors_from_vte_version_env
-          vte_version = ENV["VTE_VERSION"]
-          return nil if vte_version.nil?
-
-          major = 0
-          minor = 13
-          micro = 0
-          packed_version = major * 10000 + minor * 100 + micro
-          if vte_version.to_i >= packed_version
-            256
-          else
-            8
-          end
-        end
-
-        def guess_available_colors_from_colorterm_env
           case ENV["COLORTERM"]
-          when "gnome-terminal", "xfce4-terminal"
+          when "gnome-terminal"
             256
           else
-            nil
-          end
-        end
-
-        def guess_available_colors_from_term_env
-          case ENV["TERM"]
-          when /-256color\z/
-            256
-          else
-            nil
+            case ENV["TERM"]
+            when /-256color\z/
+              256
+            else
+              8
+            end
           end
         end
       end

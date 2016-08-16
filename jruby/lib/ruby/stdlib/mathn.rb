@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # $Release Version: 0.5 $
 # $Revision: 1.1.1.1.4.1 $

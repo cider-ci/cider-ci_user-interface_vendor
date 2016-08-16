@@ -1,3 +1,5 @@
+# Define a task library for running unit tests.
+
 require 'rake'
 require 'rake/tasklib'
 
@@ -65,9 +67,6 @@ module Rake
     # Array of commandline options to pass to ruby when running test loader.
     attr_accessor :ruby_opts
 
-    # Description of the test task. (default is 'Run tests')
-    attr_accessor :description
-
     # Explicitly define the list of test files to be included in a
     # test.  +list+ is expected to be an array of file names (a
     # FileList is acceptable).  If both +pattern+ and +test_files+ are
@@ -87,7 +86,6 @@ module Rake
       @warning = false
       @loader = :rake
       @ruby_opts = []
-      @description = "Run tests" + (@name == :test ? "" : " for #{@name}")
       yield self if block_given?
       @pattern = 'test/test*.rb' if @pattern.nil? && @test_files.nil?
       define
@@ -95,7 +93,7 @@ module Rake
 
     # Create the tasks defined by this task lib.
     def define
-      desc @description
+      desc "Run tests" + (@name == :test ? "" : " for #{@name}")
       task @name do
         FileUtilsExt.verbose(@verbose) do
           args =
@@ -123,18 +121,18 @@ module Rake
         "")
     end
 
-    def ruby_opts_string # :nodoc:
+    def ruby_opts_string
       opts = @ruby_opts.dup
       opts.unshift("-I\"#{lib_path}\"") unless @libs.empty?
       opts.unshift("-w") if @warning
       opts.join(" ")
     end
 
-    def lib_path # :nodoc:
+    def lib_path
       @libs.join(File::PATH_SEPARATOR)
     end
 
-    def file_list_string # :nodoc:
+    def file_list_string
       file_list.map { |fn| "\"#{fn}\"" }.join(' ')
     end
 
@@ -158,18 +156,18 @@ module Rake
       end || ''
     end
 
-    def ruby_version # :nodoc:
+    def ruby_version
       RUBY_VERSION
     end
 
-    def run_code # :nodoc:
+    def run_code
       case @loader
       when :direct
         "-e \"ARGV.each{|f| require f}\""
       when :testrb
         "-S testrb #{fix}"
       when :rake
-        "#{rake_include_arg} \"#{rake_loader}\""
+        "-I\"#{rake_lib_dir}\" \"#{rake_loader}\""
       end
     end
 
@@ -184,15 +182,6 @@ module Rake
         return file_path if File.exist? file_path
       end
       nil
-    end
-
-    def rake_include_arg # :nodoc:
-      spec = Gem.loaded_specs['rake']
-      if spec.respond_to?(:default_gem?) && spec.default_gem?
-        ""
-      else
-        "-I\"#{rake_lib_dir}\""
-      end
     end
 
     def rake_lib_dir # :nodoc:

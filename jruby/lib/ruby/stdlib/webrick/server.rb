@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # server.rb -- GenericServer Class
 #
@@ -49,9 +48,9 @@ module WEBrick
       exit!(0) if fork
       Dir::chdir("/")
       File::umask(0)
-      STDIN.reopen(IO::NULL)
-      STDOUT.reopen(IO::NULL, "w")
-      STDERR.reopen(IO::NULL, "w")
+      STDIN.reopen("/dev/null")
+      STDOUT.reopen("/dev/null", "w")
+      STDERR.reopen("/dev/null", "w")
       yield if block_given?
     end
   end
@@ -131,7 +130,8 @@ module WEBrick
     # WEBrick::Utils::create_listeners for details.
 
     def listen(address, port)
-      @listeners += Utils::create_listeners(address, port)
+      @listeners += Utils::create_listeners(address, port, @logger)
+      setup_shutdown_pipe
     end
 
     ##
@@ -159,8 +159,6 @@ module WEBrick
       raise ServerError, "already started." if @status != :Stop
       server_type = @config[:ServerType] || SimpleServer
 
-      setup_shutdown_pipe
-
       server_type.start{
         @logger.info \
           "#{self.class}#start: pid=#{$$} port=#{@config[:Port]}"
@@ -173,21 +171,14 @@ module WEBrick
         begin
           while @status == :Running
             begin
-              sp = shutdown_pipe[0]
-              if svrs = IO.select([sp, *@listeners], nil, nil, 2.0)
-                if svrs[0].include? sp
-                  # swallow shutdown pipe
-                  buf = String.new
-                  nil while String ===
-                            sp.read_nonblock([sp.nread, 8].max, buf, exception: false)
+              if svrs = IO.select([shutdown_pipe[0], *@listeners], nil, nil, 2.0)
+                if svrs[0].include? shutdown_pipe[0]
                   break
                 end
                 svrs[0].each{|svr|
                   @tokens.pop          # blocks while no token is there.
                   if sock = accept_client(svr)
-                    unless config[:DoNotReverseLookup].nil?
-                      sock.do_not_reverse_lookup = !!config[:DoNotReverseLookup]
-                    end
+                    sock.do_not_reverse_lookup = config[:DoNotReverseLookup]
                     th = start_thread(sock, &block)
                     th[:WEBrickThread] = true
                     thgroup.add(th)
@@ -227,8 +218,6 @@ module WEBrick
       if @status == :Running
         @status = :Shutdown
       end
-
-      alarm_shutdown_pipe {|f| f.write_nonblock("\0")}
     end
 
     ##
@@ -238,7 +227,15 @@ module WEBrick
     def shutdown
       stop
 
-      alarm_shutdown_pipe {|f| f.close}
+      shutdown_pipe = @shutdown_pipe # another thread may modify @shutdown_pipe.
+      if shutdown_pipe
+        if !shutdown_pipe[1].closed?
+          begin
+            shutdown_pipe[1].close
+          rescue IOError # closed by another thread.
+          end
+        end
+      end
     end
 
     ##
@@ -263,6 +260,7 @@ module WEBrick
         sock = svr.accept
         sock.sync = true
         Utils::set_non_blocking(sock)
+        Utils::set_close_on_exec(sock)
       rescue Errno::ECONNRESET, Errno::ECONNABORTED,
              Errno::EPROTO, Errno::EINVAL
       rescue StandardError => ex
@@ -332,7 +330,6 @@ module WEBrick
 
     def cleanup_shutdown_pipe(shutdown_pipe)
       @shutdown_pipe = nil
-      return if !shutdown_pipe
       shutdown_pipe.each {|io|
         if !io.closed?
           begin
@@ -341,18 +338,6 @@ module WEBrick
           end
         end
       }
-    end
-
-    def alarm_shutdown_pipe
-      _, pipe = @shutdown_pipe # another thread may modify @shutdown_pipe.
-      if pipe
-        if !pipe.closed?
-          begin
-            yield pipe
-          rescue IOError # closed by another thread.
-          end
-        end
-      end
     end
 
     def cleanup_listener

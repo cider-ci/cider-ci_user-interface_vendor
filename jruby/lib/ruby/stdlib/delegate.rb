@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # = delegate -- Support for the Delegation Pattern
 #
 # Documentation by James Edward Gray II and Gavin Sinclair
@@ -18,10 +17,15 @@
 # yourself needing this control, have a look at Forwardable which is also in
 # the standard library.  It may suit your needs better.)
 #
-# SimpleDelegator's implementation serves as a nice example of the use of
+# SimpleDelegator's implementation serves as a nice example if the use of
 # Delegator:
 #
 #   class SimpleDelegator < Delegator
+#     def initialize(obj)
+#       super                  # pass obj to Delegator constructor, required
+#       @delegate_sd_obj = obj # store obj for future use
+#     end
+#
 #     def __getobj__
 #       @delegate_sd_obj # return object we are delegating to, required
 #     end
@@ -78,13 +82,16 @@ class Delegator < BasicObject
   def method_missing(m, *args, &block)
     r = true
     target = self.__getobj__ {r = false}
-
-    if r && target.respond_to?(m)
-      target.__send__(m, *args, &block)
-    elsif ::Kernel.respond_to?(m, true)
-      ::Kernel.instance_method(m).bind(self).(*args, &block)
-    else
-      super(m, *args, &block)
+    begin
+      if r && target.respond_to?(m)
+        target.__send__(m, *args, &block)
+      elsif ::Kernel.respond_to?(m, true)
+        ::Kernel.instance_method(m).bind(self).(*args, &block)
+      else
+        super(m, *args, &block)
+      end
+    ensure
+      $@.delete_if {|t| %r"\A#{Regexp.quote(__FILE__)}:(?:#{[__LINE__-7, __LINE__-5, __LINE__-3].join('|')}):"o =~ t} if $@
     end
   end
 
@@ -338,7 +345,11 @@ end
 def Delegator.delegating_block(mid) # :nodoc:
   lambda do |*args, &block|
     target = self.__getobj__
-    target.__send__(mid, *args, &block)
+    begin
+      target.__send__(mid, *args, &block)
+    ensure
+      $@.delete_if {|t| /\A#{Regexp.quote(__FILE__)}:#{__LINE__-2}:/o =~ t} if $@
+    end
   end
 end
 

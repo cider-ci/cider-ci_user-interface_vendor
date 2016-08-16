@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require "bigdecimal/ludcmp"
 require "bigdecimal/jacobian"
 

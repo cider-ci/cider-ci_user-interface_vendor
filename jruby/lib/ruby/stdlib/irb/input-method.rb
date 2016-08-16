@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/input-method.rb - input methods used irb
 #   	$Release Version: 0.9.6$

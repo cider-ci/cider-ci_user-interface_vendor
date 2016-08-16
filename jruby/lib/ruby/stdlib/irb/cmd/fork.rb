@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   fork.rb -
 #   	$Release Version: 0.9.6 $

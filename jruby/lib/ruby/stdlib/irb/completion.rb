@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/completor.rb -
 #   	$Release Version: 0.9$

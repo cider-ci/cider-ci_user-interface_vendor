@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # This file contains the implementation of trackbacks. It is entirely internal
 # and not useful to outside developers.
 require 'rss/1.0'

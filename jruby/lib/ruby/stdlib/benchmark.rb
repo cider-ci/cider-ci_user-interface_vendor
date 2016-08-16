@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # benchmark.rb - a performance benchmarking library
 #
@@ -26,7 +25,7 @@
 #
 #       puts Benchmark.measure { "a"*1_000_000_000 }
 #
-#   On my machine (OSX 10.8.3 on i5 1.7 GHz) this generates:
+#   On my machine (OSX 10.8.3 on i5 1.7 Ghz) this generates:
 #
 #       0.350000   0.400000   0.750000 (  0.835234)
 #
@@ -132,7 +131,7 @@ module Benchmark
   #
   # If the block returns an array of
   # Benchmark::Tms objects, these will be used to format
-  # additional lines of output. If +labels+ parameter are
+  # additional lines of output. If +label+ parameters are
   # given, these are used to label these extra lines.
   #
   # _Note_: Other methods provide a simpler interface to this one, and are
@@ -181,8 +180,8 @@ module Benchmark
 
 
   # A simple interface to the #benchmark method, #bm generates sequential
-  # reports with labels. +label_width+ and +labels+ parameters have the same
-  # meaning as for #benchmark.
+  # reports with labels.  The parameters have the same meaning as for
+  # #benchmark.
   #
   #     require 'benchmark'
   #
@@ -271,27 +270,23 @@ module Benchmark
     STDOUT.sync = sync unless sync.nil?
   end
 
+  # :stopdoc:
+  case
+  when defined?(Process::CLOCK_MONOTONIC)
+    BENCHMARK_CLOCK = Process::CLOCK_MONOTONIC
+  else
+    BENCHMARK_CLOCK = Process::CLOCK_REALTIME
+  end
+  # :startdoc:
+
   #
   # Returns the time used to execute the given block as a
-  # Benchmark::Tms object. Takes +label+ option.
-  #
-  #       require 'benchmark'
-  #
-  #       n = 1000000
-  #
-  #       time = Benchmark.measure do
-  #         n.times { a = "1" }
-  #       end
-  #       puts time
-  #
-  # Generates:
-  #
-  #        0.220000   0.000000   0.220000 (  0.227313)
+  # Benchmark::Tms object.
   #
   def measure(label = "") # :yield:
-    t0, r0 = Process.times, Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    t0, r0 = Process.times, Process.clock_gettime(BENCHMARK_CLOCK)
     yield
-    t1, r1 = Process.times, Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    t1, r1 = Process.times, Process.clock_gettime(BENCHMARK_CLOCK)
     Benchmark::Tms.new(t1.utime  - t0.utime,
                        t1.stime  - t0.stime,
                        t1.cutime - t0.cutime,
@@ -304,9 +299,9 @@ module Benchmark
   # Returns the elapsed real time used to execute the given block.
   #
   def realtime # :yield:
-    r0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    r0 = Process.clock_gettime(BENCHMARK_CLOCK)
     yield
-    Process.clock_gettime(Process::CLOCK_MONOTONIC) - r0
+    Process.clock_gettime(BENCHMARK_CLOCK) - r0
   end
 
   module_function :benchmark, :measure, :realtime, :bm, :bmbm
@@ -480,7 +475,7 @@ module Benchmark
 
     #
     # Returns the contents of this Tms object as
-    # a formatted string, according to a +format+ string
+    # a formatted string, according to a format string
     # like that passed to Kernel.format. In addition, #format
     # accepts the following extensions:
     #
@@ -492,7 +487,7 @@ module Benchmark
     # <tt>%r</tt>::     Replaced by the elapsed real time, as reported by Tms#real
     # <tt>%n</tt>::     Replaced by the label string, as reported by Tms#label (Mnemonic: n of "*n*ame")
     #
-    # If +format+ is not given, FORMAT is used as default value, detailing the
+    # If _format_ is not given, FORMAT is used as default value, detailing the
     # user, system and real elapsed time.
     #
     def format(format = nil, *args)

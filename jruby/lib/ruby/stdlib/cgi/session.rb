@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # cgi/session.rb - session support for cgi scripts
 #
@@ -164,26 +163,24 @@ class CGI
 
     # Create a new session id.
     #
-    # The session id is a secure random number by SecureRandom
-    # if possible, otherwise an SHA512 hash based upon the time,
-    # a random number, and a constant string.  This routine is
-    # used internally for automatically generated session ids.
+    # The session id is an MD5 hash based upon the time,
+    # a random number, and a constant string.  This routine
+    # is used internally for automatically generated
+    # session ids.
     def create_new_id
       require 'securerandom'
       begin
-        # by OpenSSL, or system provided entropy pool
         session_id = SecureRandom.hex(16)
       rescue NotImplementedError
-        # never happens on modern systems
-        require 'digest'
-        d = Digest('SHA512').new
+        require 'digest/md5'
+        md5 = Digest::MD5::new
         now = Time::now
-        d.update(now.to_s)
-        d.update(String(now.usec))
-        d.update(String(rand(0)))
-        d.update(String($$))
-        d.update('foobar')
-        session_id = d.hexdigest[0, 32]
+        md5.update(now.to_s)
+        md5.update(String(now.usec))
+        md5.update(String(rand(0)))
+        md5.update(String($$))
+        md5.update('foobar')
+        session_id = md5.hexdigest
       end
       session_id
     end

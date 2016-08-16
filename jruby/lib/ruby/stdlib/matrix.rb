@@ -1,5 +1,4 @@
 # encoding: utf-8
-# frozen_string_literal: false
 #
 # = matrix.rb
 #
@@ -46,7 +45,6 @@ end
 # * Matrix.zero(n)
 # * Matrix.row_vector(row)
 # * Matrix.column_vector(column)
-# * Matrix.empty(row_count, column_count)
 # * Matrix.hstack(*matrices)
 # * Matrix.vstack(*matrices)
 #
@@ -1702,7 +1700,6 @@ end
 # * #*(x) "is matrix or number"
 # * #+(v)
 # * #-(v)
-# * #/(v)
 # * #+@
 # * #-@
 #
@@ -1716,7 +1713,6 @@ end
 # * #norm
 # * #normalize
 # * #r
-# * #round
 # * #size
 #
 # Conversion to other data types:
@@ -1793,13 +1789,6 @@ class Vector
   alias set_element []=
   alias set_component []=
   private :[]=, :set_element, :set_component
-
-  # Returns a vector with entries rounded to the given precision
-  # (see Float#round)
-  #
-  def round(ndigits=0)
-    map{|e| e.round(ndigits)}
-  end
 
   #
   # Returns the number of elements in the vector.
@@ -1918,7 +1907,7 @@ class Vector
   #++
 
   #
-  # Multiplies the vector by +x+, where +x+ is a number or a matrix.
+  # Multiplies the vector by +x+, where +x+ is a number or another vector.
   #
   def *(x)
     case x

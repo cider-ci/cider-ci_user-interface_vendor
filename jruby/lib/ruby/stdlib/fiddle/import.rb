@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'fiddle'
 require 'fiddle/struct'
 require 'fiddle/cparser'

@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # = uri/common.rb
 #
@@ -402,7 +401,7 @@ module URI
       # host          = hostname | IPv4address | IPv6reference (RFC 2732)
       ret[:HOST] = host = "(?:#{hostname}|#{ipv4addr}|#{ipv6ref})"
       # port          = *digit
-      ret[:PORT] = port = '\d*'
+      port = '\d*'
       # hostport      = host [ ":" port ]
       ret[:HOSTPORT] = hostport = "#{host}(?::#{port})?"
 

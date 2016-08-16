@@ -1,7 +1,4 @@
-# frozen_string_literal: true
-
-require 'socket.so'
-require 'io/wait'
+require 'socket.jar'
 
 class Addrinfo
   # creates an Addrinfo object from the arguments.
@@ -53,13 +50,17 @@ class Addrinfo
       sock.ipv6only! if self.ipv6?
       sock.bind local_addrinfo if local_addrinfo
       if timeout
-        case sock.connect_nonblock(self, exception: false)
-        when 0 # success or EISCONN, other errors raise
-          break
-        when :wait_writable
-          sock.wait_writable(timeout) or
+        begin
+          sock.connect_nonblock(self)
+        rescue IO::WaitWritable
+          if !IO.select(nil, [sock], nil, timeout)
             raise Errno::ETIMEDOUT, 'user specified timeout'
-        end while true
+          end
+          begin
+            sock.connect_nonblock(self) # check connection failure
+          rescue Errno::EISCONN
+          end
+        end
       else
         sock.connect(self)
       end
@@ -500,8 +501,11 @@ class Socket < BasicSocket
     loop {
       readable, _, _ = IO.select(sockets)
       readable.each {|r|
-        sock, addr = r.accept_nonblock(exception: false)
-        next if sock == :wait_readable
+        begin
+          sock, addr = r.accept_nonblock
+        rescue IO::WaitReadable
+          next
+        end
         yield sock, addr
       }
     }
@@ -665,8 +669,11 @@ class Socket < BasicSocket
   #
   def self.udp_server_recv(sockets)
     sockets.each {|r|
-      msg, sender_addrinfo, _, *controls = r.recvmsg_nonblock(exception: false)
-      next if msg == :wait_readable
+      begin
+        msg, sender_addrinfo, _, *controls = r.recvmsg_nonblock
+      rescue IO::WaitReadable
+        next
+      end
       ai = r.local_address
       if ai.ipv6? and pktinfo = controls.find {|c| c.cmsg_is?(:IPV6, :PKTINFO) }
         ai = Addrinfo.udp(pktinfo.ipv6_pktinfo_addr.ip_address, ai.ip_port)
@@ -743,7 +750,7 @@ class Socket < BasicSocket
     attr_reader :local_address
 
     def inspect # :nodoc:
-      "\#<#{self.class}: #{@remote_address.inspect_sockaddr} to #{@local_address.inspect_sockaddr}>".dup
+      "\#<#{self.class}: #{@remote_address.inspect_sockaddr} to #{@local_address.inspect_sockaddr}>"
     end
 
     # Sends the String +msg+ to the source
@@ -803,7 +810,7 @@ class Socket < BasicSocket
         st = File.lstat(path)
       rescue Errno::ENOENT
       end
-      if st&.socket? && st.owned?
+      if st && st.socket? && st.owned?
         File.unlink path
       end
     end
@@ -859,4 +866,6 @@ class Socket < BasicSocket
       accept_loop(serv, &b)
     }
   end
+
 end
+

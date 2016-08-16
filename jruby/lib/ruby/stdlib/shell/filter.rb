@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   shell/filter.rb -
 #       $Release Version: 0.7 $

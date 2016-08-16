@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 class Matrix
   # Adapted from JAMA: http://math.nist.gov/javanumerics/jama/
 
@@ -120,113 +119,113 @@ class Matrix
       #  Auto. Comp., Vol.ii-Linear Algebra, and the corresponding
       #  Fortran subroutine in EISPACK.
 
-      @size.times do |j|
-        @d[j] = @v[@size-1][j]
-      end
-
-      # Householder reduction to tridiagonal form.
-
-      (@size-1).downto(0+1) do |i|
-
-        # Scale to avoid under/overflow.
-
-        scale = 0.0
-        h = 0.0
-        i.times do |k|
-          scale = scale + @d[k].abs
+        @size.times do |j|
+          @d[j] = @v[@size-1][j]
         end
-        if (scale == 0.0)
-          @e[i] = @d[i-1]
-          i.times do |j|
-            @d[j] = @v[i-1][j]
-            @v[i][j] = 0.0
-            @v[j][i] = 0.0
-          end
-        else
 
-          # Generate Householder vector.
+        # Householder reduction to tridiagonal form.
 
+        (@size-1).downto(0+1) do |i|
+
+          # Scale to avoid under/overflow.
+
+          scale = 0.0
+          h = 0.0
           i.times do |k|
-            @d[k] /= scale
-            h += @d[k] * @d[k]
+            scale = scale + @d[k].abs
           end
-          f = @d[i-1]
-          g = Math.sqrt(h)
-          if (f > 0)
-            g = -g
-          end
-          @e[i] = scale * g
-          h -= f * g
-          @d[i-1] = f - g
-          i.times do |j|
-            @e[j] = 0.0
-          end
-
-          # Apply similarity transformation to remaining columns.
-
-          i.times do |j|
-            f = @d[j]
-            @v[j][i] = f
-            g = @e[j] + @v[j][j] * f
-            (j+1).upto(i-1) do |k|
-              g += @v[k][j] * @d[k]
-              @e[k] += @v[k][j] * f
+          if (scale == 0.0)
+            @e[i] = @d[i-1]
+            i.times do |j|
+              @d[j] = @v[i-1][j]
+              @v[i][j] = 0.0
+              @v[j][i] = 0.0
             end
-            @e[j] = g
-          end
-          f = 0.0
-          i.times do |j|
-            @e[j] /= h
-            f += @e[j] * @d[j]
-          end
-          hh = f / (h + h)
-          i.times do |j|
-            @e[j] -= hh * @d[j]
-          end
-          i.times do |j|
-            f = @d[j]
-            g = @e[j]
-            j.upto(i-1) do |k|
-              @v[k][j] -= (f * @e[k] + g * @d[k])
+          else
+
+            # Generate Householder vector.
+
+            i.times do |k|
+              @d[k] /= scale
+              h += @d[k] * @d[k]
             end
-            @d[j] = @v[i-1][j]
-            @v[i][j] = 0.0
+            f = @d[i-1]
+            g = Math.sqrt(h)
+            if (f > 0)
+              g = -g
+            end
+            @e[i] = scale * g
+            h -= f * g
+            @d[i-1] = f - g
+            i.times do |j|
+              @e[j] = 0.0
+            end
+
+            # Apply similarity transformation to remaining columns.
+
+            i.times do |j|
+              f = @d[j]
+              @v[j][i] = f
+              g = @e[j] + @v[j][j] * f
+              (j+1).upto(i-1) do |k|
+                g += @v[k][j] * @d[k]
+                @e[k] += @v[k][j] * f
+              end
+              @e[j] = g
+            end
+            f = 0.0
+            i.times do |j|
+              @e[j] /= h
+              f += @e[j] * @d[j]
+            end
+            hh = f / (h + h)
+            i.times do |j|
+              @e[j] -= hh * @d[j]
+            end
+            i.times do |j|
+              f = @d[j]
+              g = @e[j]
+              j.upto(i-1) do |k|
+                @v[k][j] -= (f * @e[k] + g * @d[k])
+              end
+              @d[j] = @v[i-1][j]
+              @v[i][j] = 0.0
+            end
           end
+          @d[i] = h
         end
-        @d[i] = h
-      end
 
-      # Accumulate transformations.
+        # Accumulate transformations.
 
-      0.upto(@size-1-1) do |i|
-        @v[@size-1][i] = @v[i][i]
-        @v[i][i] = 1.0
-        h = @d[i+1]
-        if (h != 0.0)
+        0.upto(@size-1-1) do |i|
+          @v[@size-1][i] = @v[i][i]
+          @v[i][i] = 1.0
+          h = @d[i+1]
+          if (h != 0.0)
+            0.upto(i) do |k|
+              @d[k] = @v[k][i+1] / h
+            end
+            0.upto(i) do |j|
+              g = 0.0
+              0.upto(i) do |k|
+                g += @v[k][i+1] * @v[k][j]
+              end
+              0.upto(i) do |k|
+                @v[k][j] -= g * @d[k]
+              end
+            end
+          end
           0.upto(i) do |k|
-            @d[k] = @v[k][i+1] / h
-          end
-          0.upto(i) do |j|
-            g = 0.0
-            0.upto(i) do |k|
-              g += @v[k][i+1] * @v[k][j]
-            end
-            0.upto(i) do |k|
-              @v[k][j] -= g * @d[k]
-            end
+            @v[k][i+1] = 0.0
           end
         end
-        0.upto(i) do |k|
-          @v[k][i+1] = 0.0
+        @size.times do |j|
+          @d[j] = @v[@size-1][j]
+          @v[@size-1][j] = 0.0
         end
+        @v[@size-1][@size-1] = 1.0
+        @e[0] = 0.0
       end
-      @size.times do |j|
-        @d[j] = @v[@size-1][j]
-        @v[@size-1][j] = 0.0
-      end
-      @v[@size-1][@size-1] = 1.0
-      @e[0] = 0.0
-    end
 
 
     # Symmetric tridiagonal QL algorithm.
@@ -459,7 +458,7 @@ class Matrix
       high = nn-1
       eps = Float::EPSILON
       exshift = 0.0
-      p = q = r = s = z = 0
+      p=q=r=s=z=0
 
       # Store roots isolated by balanc and compute matrix norm
 
@@ -728,20 +727,20 @@ class Matrix
         return
       end
 
-      (nn-1).downto(0) do |k|
-        p = @d[k]
-        q = @e[k]
+      (nn-1).downto(0) do |n|
+        p = @d[n]
+        q = @e[n]
 
         # Real vector
 
         if (q == 0)
-          l = k
-          @h[k][k] = 1.0
-          (k-1).downto(0) do |i|
+          l = n
+          @h[n][n] = 1.0
+          (n-1).downto(0) do |i|
             w = @h[i][i] - p
             r = 0.0
-            l.upto(k) do |j|
-              r += @h[i][j] * @h[j][k]
+            l.upto(n) do |j|
+              r += @h[i][j] * @h[j][n]
             end
             if (@e[i] < 0.0)
               z = w
@@ -750,9 +749,9 @@ class Matrix
               l = i
               if (@e[i] == 0.0)
                 if (w != 0.0)
-                  @h[i][k] = -r / w
+                  @h[i][n] = -r / w
                 else
-                  @h[i][k] = -r / (eps * norm)
+                  @h[i][n] = -r / (eps * norm)
                 end
 
               # Solve real equations
@@ -762,20 +761,20 @@ class Matrix
                 y = @h[i+1][i]
                 q = (@d[i] - p) * (@d[i] - p) + @e[i] * @e[i]
                 t = (x * s - z * r) / q
-                @h[i][k] = t
+                @h[i][n] = t
                 if (x.abs > z.abs)
-                  @h[i+1][k] = (-r - w * t) / x
+                  @h[i+1][n] = (-r - w * t) / x
                 else
-                  @h[i+1][k] = (-s - y * t) / z
+                  @h[i+1][n] = (-s - y * t) / z
                 end
               end
 
               # Overflow control
 
-              t = @h[i][k].abs
+              t = @h[i][n].abs
               if ((eps * t) * t > 1)
-                i.upto(k) do |j|
-                  @h[j][k] = @h[j][k] / t
+                i.upto(n) do |j|
+                  @h[j][n] = @h[j][n] / t
                 end
               end
             end

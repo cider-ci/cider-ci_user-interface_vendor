@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   help.rb - helper using ri
 #   	$Release Version: 0.9.6$

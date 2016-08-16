@@ -122,11 +122,9 @@ module Test
         end
 
         def result_dir
-          components = [
-            ".test-result",
-            escape_class_name(@test.class.name || "AnonymousTestCase"),
-            escaped_method_name,
-          ]
+          components = [".test-result",
+                        @test.class.name || "AnonymousTestCase",
+                        escaped_method_name]
           parent_directories = [File.dirname($0), Dir.pwd]
           if Process.respond_to?(:uid)
             parent_directories << File.join(Dir.tmpdir, Process.uid.to_s)
@@ -147,17 +145,9 @@ module Test
           File.join(result_dir, "passed")
         end
 
-        def escape_class_name(class_name)
-          class_name.gsub(/(?:[: \\\/])/, "_")
-        end
-
         def escaped_method_name
-          @test.method_name.to_s.gsub(/(?:[: ]|[!?=]$)/) do |matched|
+          @test.method_name.to_s.gsub(/[!?=]$/) do |matched|
             case matched
-            when ":"
-              "_colon_"
-            when " "
-              "_"
             when "!"
               ".destructive"
             when "?"

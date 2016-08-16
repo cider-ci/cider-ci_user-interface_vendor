@@ -320,7 +320,7 @@ module Test
         #     end
         #   end
         #
-        # The difference of them are the following:
+        # The diffrence of them are the following:
         #
         # * Test case created by {sub_test_case} is an anonymous class.
         #   So you can't refer the test case by name.
@@ -331,7 +331,7 @@ module Test
         #
         # @param name [String] The name of newly created sub test case.
         # @yield
-        #   The block is evaluated under the newly created sub test
+        #   The block is evaludated under the newly created sub test
         #   case class context.
         # @return [Test::Unit::TestCase] Created sub test case class.
         def sub_test_case(name, &block)
@@ -346,7 +346,7 @@ module Test
           sub_test_case
         end
 
-        # Checks whether a test that is matched the query is
+        # Checkes whether a test that is mathched the query is
         # defined.
         #
         # @option query [String] :path (nil)
@@ -360,16 +360,17 @@ module Test
           query_line = query[:line]
           query_method_name = query[:method_name]
 
-          available_locations = target_method_locations(query_path)
-          if query_line
-            available_locations = available_locations.sort_by do |location|
-              -location[:line]
+          available_locations = method_locations
+          if query_path
+            available_locations = available_locations.find_all do |location|
+              location[:path].end_with?(query_path)
             end
-            available_location = available_locations.find do |location|
+          end
+          if query_line
+            available_location = available_locations.reverse.find do |location|
               query_line >= location[:line]
             end
             return false if available_location.nil?
-            return false if available_location[:test_case] != self
             available_locations = [available_location]
           end
           if query_method_name
@@ -389,25 +390,6 @@ module Test
         # @private
         def method_locations
           @@method_locations[self] ||= []
-        end
-
-        # @private
-        def target_method_locations(path)
-          if path.nil?
-            self_location = method_locations.first
-            path = self_location[:path] if self_location
-          end
-          return [] if path.nil?
-
-          target_locations = []
-          @@method_locations.each do |test_case, locations|
-            locations.each do |location|
-              if location[:path].end_with?(path)
-                target_locations << location.merge(:test_case => test_case)
-              end
-            end
-          end
-          target_locations
         end
       end
 

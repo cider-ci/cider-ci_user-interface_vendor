@@ -1,39 +1,7 @@
 require 'jar_dependencies'
-require 'jars/gemspec_artifacts'
 
 module Jars
   class MavenFactory
-
-    module AttachJars
-
-      def attach_jars( spec, all_dependencies = false )
-        @index ||= 0
-        @done ||= []
-
-        deps = GemspecArtifacts.new( spec )
-        deps.artifacts.each do |a|
-          # for this gemspec we want to include all artifacts but
-          # for all others we want to exclude provided and test artifacts
-          if !@done.include?( a.key ) and (all_dependencies or (a.scope != 'provided' and a.scope != 'test'))
-
-            # ruby dsl is not working reliably for classifier
-            self[ "jars.#{@index}" ] = a.to_coord_no_classifier
-            if a.exclusions
-              jndex = 0
-              a.exclusions.each do |ex|
-                self[ "jars.#{@index}.exclusions.#{jndex}" ] = ex.to_s
-              end
-            end
-            self[ "jars.#{@index}.scope" ] = a.scope if a.scope
-            if a.classifier
-              self[ "jars.#{@index}.classifier" ] = a.classifier
-            end
-            @index += 1
-            @done << a.key
-          end
-        end
-      end
-    end
 
     attr_reader :debug, :verbose
 
@@ -49,7 +17,6 @@ module Jars
       lazy_load_maven
       maven = setup( Maven::Ruby::Maven.new )
 
-      maven.extend AttachJars
       # TODO copy pom to tmp dir in case it is not a real file
       maven.options[ '-f' ] = pom
       maven

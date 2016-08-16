@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'rss/itunes'
 require 'rss/maker/2.0'
 

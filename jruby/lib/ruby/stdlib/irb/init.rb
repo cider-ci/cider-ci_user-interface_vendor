@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 #   irb/init.rb - irb initialize module
 #   	$Release Version: 0.9.6$

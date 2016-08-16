@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 =begin
 = Win32 DNS and DHCP I/F
 

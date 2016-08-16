@@ -38,9 +38,9 @@ module RDoc::RubyToken
       @text = text
     end
 
-    attr_reader :seek
-    attr_reader :line_no
-    attr_reader :char_no
+    attr :seek
+    attr :line_no
+    attr :char_no
 
     attr_accessor :text
 
@@ -73,7 +73,7 @@ module RDoc::RubyToken
       @node = node
     end
 
-    attr_reader:node
+    attr :node
 
     def ==(other)
       self.class == other.class and
@@ -101,7 +101,7 @@ module RDoc::RubyToken
       super(seek, line_no, char_no)
       @name = name
     end
-    attr_reader:name
+    attr :name
 
     def ==(other)
       self.class == other.class and
@@ -192,7 +192,7 @@ module RDoc::RubyToken
       @text = nil
     end
 
-    attr_reader:op
+    attr :op
 
     def ==(other)
       self.class == other.class and
@@ -217,7 +217,7 @@ module RDoc::RubyToken
       super(seek, line_no, char_no)
       @name = name
     end
-    attr_reader:name
+    attr :name
 
     def ==(other)
       self.class == other.class and

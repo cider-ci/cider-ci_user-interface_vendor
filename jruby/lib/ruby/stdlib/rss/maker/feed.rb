@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require "rss/maker/atom"
 
 module RSS

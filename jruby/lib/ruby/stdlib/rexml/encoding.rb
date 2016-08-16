@@ -1,5 +1,4 @@
 # coding: US-ASCII
-# frozen_string_literal: false
 module REXML
   module Encoding
     # ID ---> Encoding name

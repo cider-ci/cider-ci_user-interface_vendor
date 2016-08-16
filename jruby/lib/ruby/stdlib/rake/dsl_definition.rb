@@ -6,9 +6,6 @@ module Rake
   ##
   # DSL is a module that provides #task, #desc, #namespace, etc.  Use this
   # when you'd like to use rake outside the top level scope.
-  #
-  # For a Rakefile you run from the comamnd line this module is automatically
-  # included.
 
   module DSL
 
@@ -24,45 +21,14 @@ module Rake
 
     private
 
-    # :call-seq:
-    #   task task_name
-    #   task task_name: dependencies
-    #   task task_name, arguments => dependencies
-    #   task task_name, argument[, argument ...], :needs: dependencies
+    # Declare a basic task.
     #
-    # Declare a basic task.  The +task_name+ is always the first argument.  If
-    # the task name contains a ":" it is defined in that namespace.
-    #
-    # The +dependencies+ may be a single task name or an Array of task names.
-    # The +argument+ (a single name) or +arguments+ (an Array of names) define
-    # the arguments provided to the task.
-    #
-    # The task, argument and dependency names may be either symbols or
-    # strings.
-    #
-    # A task with a single dependency:
-    #
-    #   task clobber: %w[clean] do
+    # Example:
+    #   task :clobber => [:clean] do
     #     rm_rf "html"
     #   end
     #
-    # A task with an argument and a dependency:
-    #
-    #   task :package, [:version] => :test do |t, args|
-    #     # ...
-    #   end
-    #
-    # To invoke this task from the command line:
-    #
-    #   $ rake package[1.2.3]
-    #
-    # Alternate definition:
-    #
-    #   task :package, :version, needs: :test do |t, args|
-    #     # ...
-    #   end
-    #
-    def task(*args, &block) # :doc:
+    def task(*args, &block)
       Rake::Task.define_task(*args, &block)
     end
 
@@ -79,7 +45,7 @@ module Rake
     #     end
     #  end
     #
-    def file(*args, &block) # :doc:
+    def file(*args, &block)
       Rake::FileTask.define_task(*args, &block)
     end
 
@@ -95,10 +61,9 @@ module Rake
     # Example:
     #   directory "testdata/doc"
     #
-    def directory(*args, &block) # :doc:
+    def directory(*args, &block)
       result = file_create(*args, &block)
       dir, _ = *Rake.application.resolve_args(args)
-      dir = Rake.from_pathname(dir)
       Rake.each_dir_parent(dir) do |d|
         file_create d do |t|
           mkdir_p t.name unless File.exist?(t.name)
@@ -113,9 +78,9 @@ module Rake
     # about it)
     #
     # Example:
-    #   multitask deploy: %w[deploy_gem deploy_rdoc]
+    #   multitask :deploy => [:deploy_gem, :deploy_rdoc]
     #
-    def multitask(*args, &block) # :doc:
+    def multitask(*args, &block)
       Rake::MultiTask.define_task(*args, &block)
     end
 
@@ -123,22 +88,14 @@ module Rake
     # block.  Returns a NameSpace object that can be used to lookup
     # tasks defined in the namespace.
     #
-    # Example:
+    # E.g.
     #
     #   ns = namespace "nested" do
-    #     # the "nested:run" task
     #     task :run
     #   end
     #   task_run = ns[:run] # find :run in the given namespace.
     #
-    # Tasks can also be defined in a namespace by using a ":" in the task
-    # name:
-    #
-    #   task "nested:test" do
-    #     # ...
-    #   end
-    #
-    def namespace(name=nil, &block) # :doc:
+    def namespace(name=nil, &block)
       name = name.to_s if name.kind_of?(Symbol)
       name = name.to_str if name.respond_to?(:to_str)
       unless name.kind_of?(String) || name.nil?
@@ -151,24 +108,23 @@ module Rake
     #
     # Example:
     #  rule '.o' => '.c' do |t|
-    #    sh 'cc', '-o', t.name, t.source
+    #    sh %{cc -o #{t.name} #{t.source}}
     #  end
     #
-    def rule(*args, &block) # :doc:
+    def rule(*args, &block)
       Rake::Task.create_rule(*args, &block)
     end
 
-    # Describes the next rake task.  Duplicate descriptions are discarded.
-    # Descriptions are shown with <code>rake -T</code> (up to the first
-    # sentence) and <code>rake -D</code> (the entire description).
+    # Describe the next rake task.
+    # Duplicate descriptions are discarded.
     #
     # Example:
     #   desc "Run the Unit Tests"
-    #   task test: [:build]
-    #     # ... run tests
+    #   task :test => [:build]
+    #     runtests
     #   end
     #
-    def desc(description) # :doc:
+    def desc(description)
       Rake.application.last_description = description
     end
 
@@ -186,7 +142,7 @@ module Rake
     # Example:
     #   import ".depend", "my_rules"
     #
-    def import(*fns) # :doc:
+    def import(*fns)
       fns.each do |fn|
         Rake.application.add_import(fn)
       end

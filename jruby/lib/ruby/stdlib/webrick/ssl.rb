@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #
 # ssl.rb -- SSL/TLS enhancement for GenericServer
 #
@@ -150,7 +149,7 @@ module WEBrick
     # Updates +listen+ to enable SSL when the SSL configuration is active.
 
     def listen(address, port) # :nodoc:
-      listeners = Utils::create_listeners(address, port)
+      listeners = Utils::create_listeners(address, port, @logger)
       if @config[:SSLEnable]
         unless ssl_context
           @ssl_context = setup_ssl_context(@config)

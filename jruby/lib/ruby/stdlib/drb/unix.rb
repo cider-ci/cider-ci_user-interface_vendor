@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 require 'socket'
 require 'drb/drb'
 require 'tmpdir'
@@ -109,7 +108,7 @@ module DRb
     end
 
     def set_sockopt(soc)
-      # no-op for now
+      soc.fcntl(Fcntl::F_SETFD, Fcntl::FD_CLOEXEC) if defined? Fcntl::FD_CLOEXEC
     end
   end
 

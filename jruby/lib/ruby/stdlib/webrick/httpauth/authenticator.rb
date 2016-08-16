@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 #--
 # httpauth/authenticator.rb -- Authenticator mix-in module.
 #

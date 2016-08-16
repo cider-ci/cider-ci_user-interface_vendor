@@ -1,4 +1,3 @@
-# frozen_string_literal: true
 ##
 # The Dependency class holds a Gem name and a Gem::Requirement.
 
@@ -165,10 +164,6 @@ class Gem::Dependency
     @type ||= :runtime
   end
 
-  def runtime?
-    @type == :runtime || !@type
-  end
-
   def == other # :nodoc:
     Gem::Dependency === other &&
       self.name        == other.name &&
@@ -275,18 +270,18 @@ class Gem::Dependency
   end
 
   def matching_specs platform_only = false
-    env_req = Gem.env_requirement(name)
-    matches = Gem::Specification.stubs_for(name).find_all { |spec|
-      requirement.satisfied_by?(spec.version) && env_req.satisfied_by?(spec.version)
+    matches = Gem::Specification.stubs.find_all { |spec|
+      self.name === spec.name and # TODO: == instead of ===
+        requirement.satisfied_by? spec.version
     }.map(&:to_spec)
 
     if platform_only
       matches.reject! { |spec|
-        spec.nil? || !Gem::Platform.match(spec.platform)
+        not Gem::Platform.match spec.platform
       }
     end
 
-    matches
+    matches.sort_by { |s| s.sort_obj } # HACK: shouldn't be needed
   end
 
   ##
@@ -302,13 +297,22 @@ class Gem::Dependency
     # TODO: check Gem.activated_spec[self.name] in case matches falls outside
 
     if matches.empty? then
-      specs = Gem::Specification.stubs_for name
+      specs = Gem::Specification.find_all { |s|
+                s.name == name
+              }.map { |x| x.full_name }
 
       if specs.empty?
-        raise Gem::MissingSpecError.new name, requirement
+        total = Gem::Specification.to_a.size
+        msg   = "Could not find '#{name}' (#{requirement}) among #{total} total gem(s)\n"
       else
-        raise Gem::MissingSpecVersionError.new name, requirement, specs
+        msg   = "Could not find '#{name}' (#{requirement}) - did find: [#{specs.join ','}]\n"
       end
+      msg << "Checked in 'GEM_PATH=#{Gem.path.join(File::PATH_SEPARATOR)}', execute `gem env` for more information"
+
+      error = Gem::LoadError.new(msg)
+      error.name        = self.name
+      error.requirement = self.requirement
+      raise error
     end
 
     # TODO: any other resolver validations should go here
@@ -319,12 +323,12 @@ class Gem::Dependency
   def to_spec
     matches = self.to_specs
 
-    active = matches.find { |spec| spec && spec.activated? }
+    active = matches.find { |spec| spec.activated? }
 
     return active if active
 
-    matches.delete_if { |spec| spec.nil? || spec.version.prerelease? } unless prerelease?
+    matches.delete_if { |spec| spec.version.prerelease? } unless prerelease?
 
-    matches.first
+    matches.last
   end
 end

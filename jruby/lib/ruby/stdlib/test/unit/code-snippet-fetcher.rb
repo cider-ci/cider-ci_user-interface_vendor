@@ -5,9 +5,9 @@ module Test
         @sources = {}
       end
 
-      def fetch(path, line, options={})
+      def fetch(file, line, options={})
         n_context_line = options[:n_context_line] || 3
-        lines = source(path)
+        lines = source(file)
         return [] if lines.nil?
         min_line = [line - n_context_line, 1].max
         max_line = [line + n_context_line, lines.length].min
@@ -18,40 +18,14 @@ module Test
         end
       end
 
-      def source(path)
-        @sources[path] ||= read_source(path)
+      def source(file)
+        @sources[file] ||= read_source(file)
       end
 
       private
-      def read_source(path)
-        return nil unless File.exist?(path)
-        lines = []
-        File.open(path) do |file|
-          first_line = file.gets
-          break if first_line.nil?
-          encoding = detect_encoding(first_line)
-          if encoding
-            first_line.force_encoding(encoding)
-            file.set_encoding(encoding)
-          end
-          lines << first_line
-          lines.concat(file.readlines)
-        end
-        lines
-      end
-
-      def detect_encoding(first_line)
-        return nil unless first_line.respond_to?(:ascii_only?)
-        return nil unless first_line.ascii_only?
-        if /\b(?:en)?coding[:=]\s*([a-z\d_-]+)/i =~ first_line
-          begin
-            Encoding.find($1)
-          rescue ArgumentError
-            nil
-          end
-        else
-          nil
-        end
+      def read_source(file)
+        return nil unless File.exist?(file)
+        File.readlines(file)
       end
     end
   end

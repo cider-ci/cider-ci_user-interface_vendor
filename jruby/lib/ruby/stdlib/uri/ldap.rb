@@ -1,4 +1,3 @@
-# frozen_string_literal: false
 # = uri/ldap.rb
 #
 # Author::
